@@ -1,3 +1,4 @@
+﻿from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -8,6 +9,8 @@ Severity = Literal["high", "medium", "low", "info"]
 
 class HealthResponse(BaseModel):
     status: str
+    llm_configured: bool
+    knowledge_base_ready: bool
 
 
 class ReviewRequest(BaseModel):
@@ -24,6 +27,13 @@ class ExtractedFields(BaseModel):
     dispute_clause: str | None = None
 
 
+class KnowledgeReference(BaseModel):
+    source_title: str
+    article_label: str | None = None
+    snippet: str
+    source_path: str | None = None
+
+
 class RiskItem(BaseModel):
     rule_id: str
     title: str
@@ -31,6 +41,15 @@ class RiskItem(BaseModel):
     description: str
     evidence: str
     suggestion: str
+    risk_domain: str | None = None
+    ai_explanation: str | None = None
+    basis_sources: list[KnowledgeReference] = Field(default_factory=list)
+    clause_no: str | None = None
+    section_title: str | None = None
+    page_no: int | None = None
+    start_offset: int | None = None
+    end_offset: int | None = None
+    chunk_level: str | None = None
 
 
 class ReviewSummary(BaseModel):
@@ -39,7 +58,15 @@ class ReviewSummary(BaseModel):
     risk_count: int
 
 
+class ReviewReport(BaseModel):
+    generated_at: datetime
+    overview: str
+    key_findings: list[str] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+
+
 class ReviewResponse(BaseModel):
     summary: ReviewSummary
     extracted_fields: ExtractedFields
     risks: list[RiskItem]
+    report: ReviewReport

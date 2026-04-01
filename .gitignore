@@ -1,0 +1,47 @@
+﻿# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.venv313/
+venv/
+env/
+
+# Local dependency folders
+.deps/
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment and local config
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+
+# Local agent / workspace artifacts
+.codex/
+AGENTS.md
+knowledge/ingested/

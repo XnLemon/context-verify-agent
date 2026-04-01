@@ -1,4 +1,4 @@
-import re
+﻿import re
 
 from app.schemas.review import ExtractedFields
 
@@ -18,15 +18,26 @@ class ContractExtractor:
         return first_line[:100] or None
 
     def _extract_party(self, text: str, role: str) -> str | None:
-        match = re.search(rf"{role}[:：]\s*(.+)", text)
+        match = re.search(rf"{role}\s*[:：]\s*([^\n]+)", text)
         return match.group(1).strip() if match else None
 
     def _extract_amount(self, text: str) -> str | None:
-        match = re.search(r"(\d+(?:\.\d+)?)\s*元", text)
-        return f"{match.group(1)}元" if match else None
+        patterns = [
+            r"(?:合同总价|合同金额|价税合计|总金额)\s*[:：]?\s*(人民币)?\s*([0-9]+(?:\.[0-9]+)?)\s*元",
+            r"(人民币\s*[0-9]+(?:\.[0-9]+)?\s*元)",
+            r"([0-9]+(?:\.[0-9]+)?\s*元)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if not match:
+                continue
+            groups = [group for group in match.groups() if group]
+            return "".join(groups).replace(" ", "") if groups else match.group(0).replace(" ", "")
+        return None
 
     def _extract_dispute_clause(self, text: str) -> str | None:
         for line in text.splitlines():
-            if "争议" in line or "管辖" in line:
-                return line.strip()
+            stripped = line.strip()
+            if "争议" in stripped or "管辖" in stripped or "仲裁" in stripped:
+                return stripped
         return None
