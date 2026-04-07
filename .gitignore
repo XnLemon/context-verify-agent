@@ -54,6 +54,7 @@ knowledge/ingested/
 
 # Frontend dependencies
 frontend/node_modules/
+frontend/.vite/
 frontend/build/
 frontend/dist/
 frontend/coverage/
