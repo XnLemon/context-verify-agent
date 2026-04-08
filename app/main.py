@@ -26,9 +26,13 @@ app.include_router(router)
 repo_root = Path(__file__).resolve().parent.parent
 frontend_dist_dir = repo_root / "frontend" / "dist"
 frontend_assets_dir = frontend_dist_dir / "assets"
+uploads_dir = repo_root / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)
 
 if frontend_assets_dir.exists():
     app.mount("/assets", StaticFiles(directory=frontend_assets_dir), name="frontend-assets")
+
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 @app.get("/", include_in_schema=False, response_model=None)
