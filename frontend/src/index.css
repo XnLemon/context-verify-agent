@@ -6,8 +6,34 @@
 }
 
 @layer base {
+  :root {
+    --app-bg: #f8fafc;
+    --app-text: #0f172a;
+    --app-font-scale: 1;
+  }
+
+  html[data-theme='dark'] {
+    --app-bg: #0b1220;
+    --app-text: #e2e8f0;
+  }
+
+  html[data-font-scale='small'] {
+    --app-font-scale: 0.93;
+  }
+
+  html[data-font-scale='medium'] {
+    --app-font-scale: 1;
+  }
+
+  html[data-font-scale='large'] {
+    --app-font-scale: 1.08;
+  }
+
   body {
-    @apply bg-[#F8FAFC] text-slate-900;
+    @apply text-slate-900;
+    background: var(--app-bg);
+    color: var(--app-text);
+    font-size: calc(16px * var(--app-font-scale));
   }
 }
 
@@ -21,4 +47,35 @@
 
 .markdown-body p {
   @apply mb-4;
+}
+
+html[data-theme='dark'] .bg-white {
+  background-color: #111827 !important;
+}
+
+html[data-theme='dark'] .bg-slate-50,
+html[data-theme='dark'] .bg-slate-50\/50,
+html[data-theme='dark'] .bg-slate-100 {
+  background-color: #1f2937 !important;
+}
+
+html[data-theme='dark'] .border-slate-100,
+html[data-theme='dark'] .border-slate-200,
+html[data-theme='dark'] .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+html[data-theme='dark'] .text-slate-900 {
+  color: #e2e8f0 !important;
+}
+
+html[data-theme='dark'] .text-slate-800,
+html[data-theme='dark'] .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme='dark'] .text-slate-600,
+html[data-theme='dark'] .text-slate-500,
+html[data-theme='dark'] .text-slate-400 {
+  color: #94a3b8 !important;
 }
