@@ -12,7 +12,8 @@ ContractStatus = Literal["pending", "reviewing", "approved", "rejected"]
 IssueType = Literal["risk", "suggestion", "compliance"]
 IssueStatus = Literal["pending", "accepted", "rejected"]
 ChatRole = Literal["user", "assistant"]
-HistoryEventType = Literal["scan", "issue_decision", "chat", "import"]
+HistoryEventType = Literal["scan", "issue_decision", "chat", "import", "redraft", "manual_edit", "final_decision"]
+FinalDecisionStatus = Literal["approved", "rejected"]
 
 
 class WorkbenchContract(BaseModel):
@@ -22,6 +23,7 @@ class WorkbenchContract(BaseModel):
     status: ContractStatus
     updated_at: datetime
     author: str
+    owner_username: str | None = None
     content: str
     created_at: datetime | None = None
     source_file_name: str | None = None
@@ -117,10 +119,29 @@ class WorkbenchChatResponse(BaseModel):
 
 class WorkbenchIssueDecisionRequest(BaseModel):
     status: IssueStatus
+    auto_redraft: bool = True
+
+
+class WorkbenchFinalDecisionRequest(BaseModel):
+    status: FinalDecisionStatus
+    comment: str | None = None
+
+
+class WorkbenchContractUpdateRequest(BaseModel):
+    content: str = Field(min_length=1)
+
+
+class WorkbenchContractUpdateResponse(BaseModel):
+    contract: WorkbenchContractListItem
 
 
 class WorkbenchImportResponse(BaseModel):
     contract: WorkbenchContractListItem
+
+
+class WorkbenchFinalDecisionResponse(BaseModel):
+    contract: WorkbenchContractListItem
+    historyCount: int
 
 
 class StoredReviewRecord(BaseModel):
@@ -142,3 +163,12 @@ class StoredHistoryLog(BaseModel):
     contract_id: str
     items: list[WorkbenchHistoryItem] = Field(default_factory=list)
 
+
+class WorkbenchRedraftRequest(BaseModel):
+    our_side: str = "甲方"
+
+
+class WorkbenchRedraftResponse(BaseModel):
+    contract: WorkbenchContractListItem
+    latestReview: WorkbenchReviewResult
+    acceptedIssueCount: int

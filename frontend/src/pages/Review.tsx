@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -18,12 +18,16 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 
 import {
+  finalizeWorkbenchContract,
   getWorkbenchContractDetail,
   getWorkbenchHistory,
+  redraftWorkbenchContract,
   scanWorkbenchContract,
+  updateWorkbenchContractContent,
   sendWorkbenchChatMessage,
   updateWorkbenchIssueStatus,
 } from '@/src/lib/api';
+import { canFinalizeContract, canUploadOrEditContract } from '@/src/lib/permissions';
 import { cn } from '@/src/lib/utils';
 import type {
   AuditIssue,
@@ -33,12 +37,15 @@ import type {
   ContractStatus,
   HistoryItem,
   ReviewResult,
+  UserMember,
 } from '@/src/types';
 
 export default function Review({
+  currentUser,
   contractId,
   onBack,
 }: {
+  currentUser: UserMember;
   contractId: string | null;
   onBack: () => void;
 }) {
@@ -53,8 +60,15 @@ export default function Review({
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [pendingIssueId, setPendingIssueId] = useState<string | null>(null);
+  const [isApplyingIssueAction, setIsApplyingIssueAction] = useState(false);
   const [autoScanAttempted, setAutoScanAttempted] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [draftContent, setDraftContent] = useState('');
+  const [isSavingContent, setIsSavingContent] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const canEditContract = canUploadOrEditContract(currentUser);
+  const canFinalize = canFinalizeContract(currentUser);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -144,17 +158,32 @@ export default function Review({
     }
 
     setPendingIssueId(issueId);
+    setIsApplyingIssueAction(true);
     setError(null);
     try {
-      const nextReview = await updateWorkbenchIssueStatus(contractId, issueId, status);
-      setLatestReview(nextReview);
+      const nextReview = await updateWorkbenchIssueStatus(contractId, issueId, status, false);
+      let reviewAfterDecision = nextReview;
+
+      if (status === 'accepted') {
+        try {
+          const redraft = await redraftWorkbenchContract(contractId);
+          reviewAfterDecision = redraft.latestReview;
+          setContract(redraft.contract);
+        } catch (redraftError) {
+          const redraftMessage = redraftError instanceof Error ? redraftError.message : 'Accepted, but auto-redraft failed.';
+          setError('Accepted, but auto-redraft failed: ' + redraftMessage);
+        }
+      }
+
+      setLatestReview(reviewAfterDecision);
       const detail = await getWorkbenchContractDetail(contractId);
       setContract(detail.contract);
       await refreshHistory(contractId);
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : '更新风险状态失败。');
+      setError(updateError instanceof Error ? updateError.message : 'Failed to update issue status.');
     } finally {
       setPendingIssueId(null);
+      setIsApplyingIssueAction(false);
     }
   }
 
@@ -182,6 +211,65 @@ export default function Review({
     }
   }
 
+
+  function handleStartEdit() {
+    if (!contract) {
+      return;
+    }
+    setDraftContent(contract.content);
+    setIsEditingContent(true);
+  }
+
+  function handleCancelEdit() {
+    if (!contract) {
+      setIsEditingContent(false);
+      return;
+    }
+    setDraftContent(contract.content);
+    setIsEditingContent(false);
+  }
+
+  async function handleSaveContent() {
+    if (!contractId) {
+      return;
+    }
+    if (!draftContent.trim()) {
+      setError('合同正文不能为空。');
+      return;
+    }
+
+    setIsSavingContent(true);
+    setError(null);
+    try {
+      const result = await updateWorkbenchContractContent(contractId, draftContent);
+      setContract(result.contract);
+      setLatestReview(null);
+      setIsEditingContent(false);
+      await refreshHistory(contractId);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : '保存合同正文失败。');
+    } finally {
+      setIsSavingContent(false);
+    }
+  }
+
+  async function handleFinalize(status: Extract<ContractStatus, 'approved' | 'rejected'>) {
+    if (!contractId || !canFinalize) {
+      return;
+    }
+
+    setIsFinalizing(true);
+    setError(null);
+    try {
+      const result = await finalizeWorkbenchContract(contractId, status);
+      setContract(result.contract);
+      await refreshHistory(contractId);
+    } catch (finalizeError) {
+      setError(finalizeError instanceof Error ? finalizeError.message : '最终审批失败。');
+    } finally {
+      setIsFinalizing(false);
+    }
+  }
   const issues = latestReview?.issues ?? [];
   const pendingIssues = issues.filter((issue) => issue.status === 'pending');
 
@@ -212,6 +300,33 @@ export default function Review({
         </div>
 
         <div className="flex items-center gap-3">
+          {canEditContract && (
+            !isEditingContent ? (
+              <button
+                onClick={handleStartEdit}
+                className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                编辑正文
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={isSavingContent}
+                  className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-60"
+                >
+                  取消编辑
+                </button>
+                <button
+                  onClick={() => void handleSaveContent()}
+                  disabled={isSavingContent}
+                  className="px-4 py-1.5 text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-60"
+                >
+                  {isSavingContent ? '保存中...' : '保存正文'}
+                </button>
+              </>
+            )
+          )}
           <button
             onClick={() => setActiveTab('history')}
             className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -221,24 +336,59 @@ export default function Review({
           </button>
           <button
             onClick={() => void handleAiScan()}
-            disabled={isAiScanning}
+            disabled={isAiScanning || isEditingContent || isSavingContent}
             className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-60"
           >
             <Save size={18} />
             {isAiScanning ? '扫描中...' : '重新扫描'}
           </button>
-          <button className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors shadow-sm shadow-blue-600/10">
-            <Send size={18} />
-            提交审核
-          </button>
+          {canFinalize ? (
+            <>
+              <button
+                onClick={() => void handleFinalize('approved')}
+                disabled={isFinalizing || isEditingContent || isSavingContent}
+                className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors shadow-sm shadow-emerald-600/10 disabled:opacity-60"
+              >
+                <CheckCircle2 size={18} />
+                {isFinalizing ? '提交中...' : '最终通过'}
+              </button>
+              <button
+                onClick={() => void handleFinalize('rejected')}
+                disabled={isFinalizing || isEditingContent || isSavingContent}
+                className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors shadow-sm shadow-red-600/10 disabled:opacity-60"
+              >
+                <X size={18} />
+                驳回
+              </button>
+            </>
+          ) : (
+            <button
+              className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg transition-colors shadow-sm shadow-blue-600/10 opacity-90"
+              disabled
+            >
+              <Send size={18} />
+              等待经理/审核审批
+            </button>
+          )}
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-auto p-8 flex justify-center">
-          <div className="w-full max-w-4xl bg-white shadow-xl shadow-slate-200/50 border border-slate-200 rounded-lg min-h-[1000px] p-12 font-serif leading-relaxed text-slate-800">
+          <div className="w-full max-w-4xl bg-white shadow-xl shadow-slate-200/50 border border-slate-200 rounded-lg h-[min(100vh-9rem,960px)] min-h-[560px] p-8 md:p-12 font-serif leading-relaxed text-slate-800">
             {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
-            <DocumentContent content={contract.content} />
+                        {isEditingContent ? (
+              <div className="h-full flex flex-col gap-3">
+                <div className="text-xs text-slate-500">你可以手动编辑合同正文，保存后会同步到系统并记录操作历史。</div>
+                <textarea
+                  value={draftContent}
+                  onChange={(event) => setDraftContent(event.target.value)}
+                  className="flex-1 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-7 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+            ) : (
+              <DocumentContent content={contract.content} />
+            )}
           </div>
         </div>
 
@@ -270,7 +420,7 @@ export default function Review({
                     </div>
                     <button
                       onClick={() => void handleAiScan()}
-                      disabled={isAiScanning}
+                      disabled={isAiScanning || isEditingContent || isSavingContent}
                       className="rounded-lg bg-white/15 px-3 py-1 text-[11px] font-bold hover:bg-white/20 disabled:opacity-60"
                     >
                       {isAiScanning ? '扫描中' : '重新扫描'}
@@ -331,7 +481,7 @@ export default function Review({
                         <div className="flex gap-2">
                           <button
                             onClick={() => void handleIssueStatus(issue.id, 'accepted')}
-                            disabled={pendingIssueId === issue.id}
+                            disabled={isApplyingIssueAction || pendingIssueId !== null}
                             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition-all disabled:opacity-60"
                           >
                             <Check size={14} />
@@ -339,7 +489,7 @@ export default function Review({
                           </button>
                           <button
                             onClick={() => void handleIssueStatus(issue.id, 'rejected')}
-                            disabled={pendingIssueId === issue.id}
+                            disabled={isApplyingIssueAction || pendingIssueId !== null}
                             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-slate-50 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded-lg text-xs font-bold transition-all disabled:opacity-60"
                           >
                             <X size={14} />
@@ -478,33 +628,168 @@ export default function Review({
 }
 
 function DocumentContent({ content }: { content: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 900, height: 700 });
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+      const next = {
+        width: Math.max(320, Math.floor(entry.contentRect.width)),
+        height: Math.max(320, Math.floor(entry.contentRect.height)),
+      };
+      setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next));
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const pages = React.useMemo(() => {
+    const lines = content.split('\n');
+    const charsPerLine = Math.max(18, Math.floor((size.width - 48) / 10));
+    const pageCapacity = Math.max(16, Math.floor((size.height - 96) / 28));
+
+    const blocks: Array<{ kind: 'title' | 'clause' | 'paragraph' | 'spacer'; text: string; lines: number }> = [];
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        blocks.push({ kind: 'spacer', text: '', lines: 1 });
+        return;
+      }
+
+      if (index === 0) {
+        const lineCount = Math.max(2, Math.ceil(trimmed.length / charsPerLine) + 1);
+        blocks.push({ kind: 'title', text: trimmed, lines: lineCount });
+        return;
+      }
+
+      if (/^第[一二三四五六七八九十百零]+条/.test(trimmed)) {
+        const lineCount = Math.max(2, Math.ceil(trimmed.length / charsPerLine) + 1);
+        blocks.push({ kind: 'clause', text: trimmed, lines: lineCount });
+        return;
+      }
+
+      const lineCount = Math.max(1, Math.ceil(trimmed.length / charsPerLine));
+      blocks.push({ kind: 'paragraph', text: trimmed, lines: lineCount + 1 });
+    });
+
+    const pageBlocks: typeof blocks[] = [];
+    let current: typeof blocks = [];
+    let currentLines = 0;
+
+    const pushCurrent = () => {
+      if (current.length > 0) {
+        pageBlocks.push(current);
+      }
+      current = [];
+      currentLines = 0;
+    };
+
+    for (const block of blocks) {
+      if (block.lines > pageCapacity) {
+        if (current.length > 0) {
+          pushCurrent();
+        }
+        if (block.kind !== 'paragraph') {
+          pageBlocks.push([block]);
+          continue;
+        }
+
+        const maxChars = Math.max(charsPerLine * Math.max(6, pageCapacity - 2), 200);
+        for (let i = 0; i < block.text.length; i += maxChars) {
+          const chunk = block.text.slice(i, i + maxChars);
+          const chunkLines = Math.max(2, Math.ceil(chunk.length / charsPerLine) + 1);
+          pageBlocks.push([{ kind: 'paragraph', text: chunk, lines: chunkLines }]);
+        }
+        continue;
+      }
+
+      if (currentLines + block.lines > pageCapacity && current.length > 0) {
+        pushCurrent();
+      }
+
+      current.push(block);
+      currentLines += block.lines;
+    }
+
+    if (current.length > 0) {
+      pageBlocks.push(current);
+    }
+
+    return pageBlocks.length > 0 ? pageBlocks : [[{ kind: 'paragraph', text: '', lines: 1 }]];
+  }, [content, size.height, size.width]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [content]);
+
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, pages.length));
+  }, [pages.length]);
+
+  const currentPage = pages[Math.max(0, page - 1)] ?? [];
+
   return (
-    <div className="whitespace-pre-wrap">
-      {content.split('\n').map((line, index) => {
-        const trimmed = line.trim();
-        if (!trimmed) {
-          return <div key={index} className="h-4" />;
-        }
-        if (index === 0) {
-          return (
-            <h1 key={index} className="text-3xl font-bold mb-8 text-center text-slate-900">
-              {trimmed}
-            </h1>
-          );
-        }
-        if (/^第[一二三四五六七八九十百零]+条/.test(trimmed)) {
-          return (
-            <h2 key={index} className="text-xl font-bold mt-8 mb-4 text-slate-900">
-              {trimmed}
-            </h2>
-          );
-        }
-        return (
-          <p key={index} className="mb-4">
-            {trimmed}
-          </p>
-        );
-      })}
+    <div ref={containerRef} className="h-full flex flex-col">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full whitespace-pre-wrap overflow-hidden">
+          {currentPage.map((block, index) => {
+            if (block.kind === 'spacer') {
+              return <div key={index} className="h-4" />;
+            }
+            if (block.kind === 'title') {
+              return (
+                <h1 key={index} className="text-3xl font-bold mb-8 text-center text-slate-900 break-words">
+                  {block.text}
+                </h1>
+              );
+            }
+            if (block.kind === 'clause') {
+              return (
+                <h2 key={index} className="text-xl font-bold mt-8 mb-4 text-slate-900 break-words">
+                  {block.text}
+                </h2>
+              );
+            }
+            return (
+              <p key={index} className="mb-4 break-words">
+                {block.text}
+              </p>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-slate-200 pt-3 flex items-center justify-between text-sm text-slate-500">
+        <button
+          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+          disabled={page <= 1}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Prev
+        </button>
+        <span>
+          Page {page} / {pages.length}
+        </span>
+        <button
+          onClick={() => setPage((prev) => Math.min(pages.length, prev + 1))}
+          disabled={page >= pages.length}
+          className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
@@ -614,3 +899,14 @@ function formatDateTime(value: string) {
     minute: '2-digit',
   });
 }
+
+
+
+
+
+
+
+
+
+
+

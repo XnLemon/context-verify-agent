@@ -5,6 +5,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.schemas.auth import MemberPublic
 from app.schemas.chat import ChatResponse
 from app.schemas.review import ExtractedFields, ReviewReport, ReviewResponse, ReviewSummary
 from app.schemas.workbench import (
@@ -13,9 +14,11 @@ from app.schemas.workbench import (
     WorkbenchContractDetailResponse,
     WorkbenchContractListItem,
     WorkbenchContractListResponse,
+    WorkbenchContractUpdateResponse,
     WorkbenchHistoryItem,
     WorkbenchImportResponse,
     WorkbenchIssue,
+    WorkbenchRedraftResponse,
     WorkbenchReviewResult,
     WorkbenchScanResponse,
     WorkbenchSummaryResponse,
@@ -159,6 +162,26 @@ class ApiRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()[0]["type"], "scan")
 
+    def test_workbench_update_contract_returns_payload(self) -> None:
+        fake_response = WorkbenchContractUpdateResponse(
+            contract=WorkbenchContractListItem(
+                id="contract-001",
+                title="采购合同",
+                type="采购合同",
+                status="pending",
+                updatedAt="2026-04-07 10:00",
+                author="李明",
+                content="更新后的正文",
+            )
+        )
+        with patch("app.api.routes.workbench_service.update_contract_content", return_value=fake_response):
+            response = self.client.patch(
+                "/api/workbench/contracts/contract-001",
+                json={"content": "更新后的正文"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["contract"]["content"], "更新后的正文")
     def test_workbench_import_accepts_upload(self) -> None:
         fake_response = WorkbenchImportResponse(
             contract=WorkbenchContractListItem(
@@ -268,5 +291,114 @@ class ApiRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
 
 
+    def test_workbench_redraft_returns_contract_payload(self) -> None:
+        review = WorkbenchReviewResult(
+            summary=ReviewSummary(contract_type="????", overall_risk="medium", risk_count=1),
+            reportOverview="?????",
+            keyFindings=["??????????"],
+            nextActions=["??????"],
+            issues=[
+                WorkbenchIssue(
+                    id="PAY_001-1-1",
+                    type="risk",
+                    severity="high",
+                    message="??????????",
+                    suggestion="??????",
+                    location="??? | ????",
+                    status="accepted",
+                )
+            ],
+            generatedAt=datetime.now(timezone.utc),
+        )
+        fake_response = WorkbenchRedraftResponse(
+            contract=WorkbenchContractListItem(
+                id="contract-001",
+                title="????",
+                type="????",
+                status="reviewing",
+                updatedAt="2026-04-07 10:00",
+                author="??",
+                content="????????",
+            ),
+            latestReview=review,
+            acceptedIssueCount=1,
+        )
+        with patch("app.api.routes.workbench_service.redraft_contract", return_value=fake_response):
+            response = self.client.post(
+                "/api/workbench/contracts/contract-001/redraft",
+                json={"our_side": "??"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["acceptedIssueCount"], 1)
+        self.assertEqual(response.json()["contract"]["content"], "????????")
+
+
+
+    def test_auth_login_challenge_returns_nonce_and_salt(self) -> None:
+        fake_challenge = {
+            "challenge_token": "challenge-1",
+            "nonce": "nonce-1",
+            "salt": "salt-1",
+            "expires_at": "2026-04-08T10:00:00Z",
+        }
+        with patch("app.api.routes.auth_service.issue_login_challenge", return_value=fake_challenge):
+            response = self.client.post("/api/auth/login/challenge", json={"username": "admin"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["challenge_token"], "challenge-1")
+    def test_auth_login_returns_member_and_token(self) -> None:
+        fake_response = {
+            "token": "token-1",
+            "expires_at": "2026-04-08T10:00:00Z",
+            "member": {
+                "id": 1,
+                "username": "admin",
+                "display_name": "系统管理员",
+                "role": "admin",
+                "member_type": "admin",
+                "is_active": True,
+                "last_login_at": None,
+                "created_at": "2026-04-07T10:00:00Z",
+            },
+        }
+        with patch("app.api.routes.auth_service.login_with_proof", return_value=fake_response):
+            response = self.client.post("/api/auth/login", json={"username": "admin", "challenge_token": "token-123", "password_proof": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["member"]["role"], "admin")
+
+    def test_auth_me_returns_401_without_token(self) -> None:
+        with patch("app.api.routes.auth_service.authenticate_bearer", side_effect=PermissionError("缺少登录凭证")):
+            response = self.client.get("/api/auth/me")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_admin_create_employee_forbidden_for_non_admin(self) -> None:
+        employee_member = MemberPublic(
+            id=2,
+            username="u1",
+            display_name="员工1",
+            role="employee",
+            member_type="legal",
+            is_active=True,
+            last_login_at=None,
+            created_at=datetime.now(timezone.utc),
+        )
+        with patch("app.api.routes.auth_service.authenticate_bearer", return_value=employee_member):
+            response = self.client.post(
+                "/api/admin/employees",
+                headers={"Authorization": "Bearer mock-token"},
+                json={"username": "new1", "password": "123456", "display_name": "新员工", "member_type": "legal"},
+            )
+
+        self.assertEqual(response.status_code, 403)
 if __name__ == "__main__":
     unittest.main()
+
+
+
+
+
+
+

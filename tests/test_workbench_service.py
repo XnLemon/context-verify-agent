@@ -13,28 +13,28 @@ from app.services.workbench_service import WorkbenchService
 class FakeReviewService:
     def review(self, payload):
         return ReviewResponse(
-            summary=ReviewSummary(contract_type=payload.contract_type or "采购合同", overall_risk="medium", risk_count=1),
-            extracted_fields=ExtractedFields(contract_name="测试合同"),
+            summary=ReviewSummary(contract_type=payload.contract_type or "�ɹ���ͬ", overall_risk="medium", risk_count=1),
+            extracted_fields=ExtractedFields(contract_name="���Ժ�ͬ"),
             risks=[
                 RiskItem(
                     rule_id="PAY_001",
-                    title="付款条款可能早于验收",
+                    title="�������������������",
                     severity="high",
                     description="desc",
-                    evidence="甲方应于合同签订后5日内支付100%合同价款。",
-                    suggestion="建议改为分阶段付款。",
-                    risk_domain="付款",
-                    clause_no="第二条",
-                    section_title="付款方式",
+                    evidence="�׷�Ӧ�ں�ͬǩ����5����֧��100%��ͬ�ۿ",
+                    suggestion="�����Ϊ�ֽ׶θ��",
+                    risk_domain="����",
+                    clause_no="�ڶ���",
+                    section_title="���ʽ",
                     start_offset=12,
                     end_offset=32,
                 )
             ],
             report=ReviewReport(
                 generated_at=datetime(2026, 4, 7, tzinfo=timezone.utc),
-                overview="已完成校审。",
-                key_findings=["付款条款可能早于验收"],
-                next_actions=["建议改为分阶段付款。"],
+                overview="�����У��",
+                key_findings=["�������������������"],
+                next_actions=["�����Ϊ�ֽ׶θ��"],
             ),
         )
 
@@ -45,14 +45,21 @@ class FakeReviewService:
                 file_name=file_name,
                 file_type="txt",
                 source_path=file_name,
-                title="导入合同",
-                contract_type_hint="采购合同",
+                title="�����ͬ",
+                contract_type_hint="�ɹ���ͬ",
                 page_count=1,
             ),
             raw_text=content.decode("utf-8"),
             spans=[],
             clause_chunks=[],
         )
+
+
+
+
+class FakeContractEditor:
+    def redraft_contract(self, *, contract_text: str, contract_type: str, our_side: str, accepted_issues: list[dict[str, str]]) -> str:
+        return contract_text + "\n\n?AI????????????????"
 
 
 class FakeChatService:
@@ -64,7 +71,7 @@ class FakeChatService:
         return ChatResponse(
             intent="review" if self.return_review else "chat",
             tool_used="review" if self.return_review else "chat",
-            answer="这是基于合同的回复。",
+            answer="���ǻ��ں�ͬ�Ļظ���",
             generated_at=datetime.now(timezone.utc),
             search_results=[],
             review_result=review_result,
@@ -96,7 +103,7 @@ class WorkbenchServiceTests(unittest.TestCase):
 
         self.assertEqual(response.contract.id, "contract-001")
         self.assertEqual(response.contract.status, "reviewing")
-        self.assertIn("采购合同", response.contract.content)
+        self.assertIn("第一条", response.contract.content)
 
     def test_scan_contract_persists_latest_review(self) -> None:
         response = self.service.scan_contract("contract-001")
@@ -121,7 +128,7 @@ class WorkbenchServiceTests(unittest.TestCase):
         self.assertEqual(detail.contract.status, "approved")
 
     def test_chat_contract_persists_messages_and_history(self) -> None:
-        response = self.service.chat_contract("contract-001", payload=WorkbenchChatRequest(message="请解释争议条款"))
+        response = self.service.chat_contract("contract-001", payload=WorkbenchChatRequest(message="�������������"))
         detail = self.service.get_contract_detail("contract-001")
         history = self.service.get_history("contract-001")
 
@@ -132,7 +139,7 @@ class WorkbenchServiceTests(unittest.TestCase):
     def test_chat_contract_can_persist_review_result(self) -> None:
         self.chat_service.return_review = True
 
-        response = self.service.chat_contract("contract-001", payload=WorkbenchChatRequest(message="请重新审查"))
+        response = self.service.chat_contract("contract-001", payload=WorkbenchChatRequest(message="���������"))
         detail = self.service.get_contract_detail("contract-001")
 
         self.assertEqual(response.intent, "review")
@@ -140,18 +147,77 @@ class WorkbenchServiceTests(unittest.TestCase):
         self.assertIsNotNone(detail.latestReview)
 
     def test_import_contract_creates_new_record(self) -> None:
-        response = self.service.import_contract(file_name="new.txt", content="导入的合同正文".encode("utf-8"))
+        response = self.service.import_contract(file_name="new.txt", content="����ĺ�ͬ����".encode("utf-8"))
         detail = self.service.get_contract_detail(response.contract.id)
 
-        self.assertEqual(response.contract.title, "导入合同")
+        self.assertEqual(response.contract.title, "�����ͬ")
         self.assertEqual(detail.contract.author, "系统导入")
         self.assertEqual(self.service.list_contracts().total, 5)
 
+    def test_update_contract_content_persists_and_sets_pending(self) -> None:
+        response = self.service.update_contract_content("contract-001", "手动修改后的合同正文")
+        detail = self.service.get_contract_detail("contract-001")
+        history = self.service.get_history("contract-001")
+
+        self.assertEqual(response.contract.content, "手动修改后的合同正文")
+        self.assertEqual(detail.contract.content, "手动修改后的合同正文")
+        self.assertEqual(detail.contract.status, "pending")
+        self.assertEqual(history[0].type, "manual_edit")
     def test_missing_contract_raises_key_error(self) -> None:
         with self.assertRaises(KeyError):
             self.service.get_contract_detail("missing")
 
 
+    def test_redraft_contract_updates_content(self) -> None:
+        self.service.scan_contract("contract-001")
+        self.service._contract_editor = FakeContractEditor()
+        self.service.decide_issue(
+            "contract-001",
+            "PAY_001-12-1",
+            WorkbenchIssueDecisionRequest(status="accepted", auto_redraft=False),
+        )
+
+        response = self.service.redraft_contract("contract-001", our_side="??")
+        detail = self.service.get_contract_detail("contract-001")
+
+        self.assertEqual(response.acceptedIssueCount, 1)
+        self.assertIn("AI???", response.contract.content)
+        self.assertIn("AI???", detail.contract.content)
+
+    def test_decide_issue_can_auto_redraft(self) -> None:
+        self.service.scan_contract("contract-001")
+        self.service._contract_editor = FakeContractEditor()
+
+        self.service.decide_issue(
+            "contract-001",
+            "PAY_001-12-1",
+            WorkbenchIssueDecisionRequest(status="accepted", auto_redraft=True),
+        )
+        detail = self.service.get_contract_detail("contract-001")
+
+        self.assertIn("AI???", detail.contract.content)
+
+
+    def test_rescan_resets_issue_status_to_pending(self) -> None:
+        self.service.scan_contract("contract-001")
+        self.service.decide_issue(
+            "contract-001",
+            "PAY_001-12-1",
+            WorkbenchIssueDecisionRequest(status="accepted", auto_redraft=False),
+        )
+
+        before_rescan = self.service.get_contract_detail("contract-001")
+        self.assertEqual(before_rescan.contract.status, "approved")
+        self.assertEqual(before_rescan.latestReview.issues[0].status, "accepted")
+
+        self.service.scan_contract("contract-001")
+        after_rescan = self.service.get_contract_detail("contract-001")
+
+        self.assertEqual(after_rescan.contract.status, "reviewing")
+        self.assertEqual(after_rescan.latestReview.issues[0].status, "pending")
+
 if __name__ == "__main__":
     unittest.main()
+
+
 

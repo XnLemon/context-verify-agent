@@ -1,7 +1,10 @@
-export type ContractStatus = 'pending' | 'reviewing' | 'approved' | 'rejected';
+﻿export type ContractStatus = 'pending' | 'reviewing' | 'approved' | 'rejected';
 export type AuditIssueType = 'risk' | 'suggestion' | 'compliance';
 export type AuditIssueSeverity = 'high' | 'medium' | 'low' | 'info';
 export type AuditIssueStatus = 'pending' | 'accepted' | 'rejected';
+export type MemberType = 'legal' | 'procurement' | 'business';
+export type ThemePreference = 'light' | 'dark' | 'system';
+export type FontScale = 'small' | 'medium' | 'large';
 
 export interface Contract {
   id: string;
@@ -57,7 +60,7 @@ export interface ChatMessage {
 
 export interface HistoryItem {
   id: string;
-  type: 'scan' | 'issue_decision' | 'chat' | 'import';
+  type: 'scan' | 'issue_decision' | 'chat' | 'import' | 'redraft' | 'manual_edit' | 'final_decision';
   title: string;
   description: string;
   createdAt: string;
@@ -88,3 +91,80 @@ export interface ChatResponse {
   messages: ChatMessage[];
   latestReview: ReviewResult | null;
 }
+
+export interface ImportContractResponse {
+  contract: Contract;
+}
+
+export interface RedraftResponse {
+  contract: Contract;
+  latestReview: ReviewResult;
+  acceptedIssueCount: number;
+}
+
+export interface FinalizeContractResponse {
+  contract: Contract;
+  historyCount: number;
+}
+
+export type UserRole = 'admin' | 'employee';
+export type UserMemberType = 'admin' | 'legal' | 'procurement' | 'business' | 'other';
+
+export interface UserMember {
+  id: number;
+  username: string;
+  display_name: string;
+  role: UserRole;
+  member_type: UserMemberType;
+  is_active: boolean;
+  avatar_url: string | null;
+  theme_preference: ThemePreference;
+  font_scale: FontScale;
+  notify_enabled: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+export interface LoginChallengeResponse {
+  challenge_token: string;
+  nonce: string;
+  salt: string;
+  expires_at: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  expires_at: string;
+  member: UserMember;
+}
+
+export interface EmployeeListResponse {
+  items: UserMember[];
+  total: number;
+}
+
+export interface CreateEmployeeRequest {
+  username: string;
+  password: string;
+  display_name: string;
+  member_type: Exclude<UserMemberType, 'admin'>;
+}
+
+
+export interface UpdateProfileRequest {
+  display_name: string;
+}
+
+export interface UpdateSettingsRequest {
+  theme_preference: ThemePreference;
+  font_scale: FontScale;
+  notify_enabled: boolean;
+}
+
+export interface AvatarUploadResponse {
+  avatar_url: string;
+  member: UserMember;
+}
+
+
+
