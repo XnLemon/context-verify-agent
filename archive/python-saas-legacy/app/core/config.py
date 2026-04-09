@@ -35,8 +35,15 @@ class Settings(BaseModel):
     rerank_timeout_seconds: int = int(os.getenv("RERANK_TIMEOUT_SECONDS", "8"))
     rerank_max_retries: int = int(os.getenv("RERANK_MAX_RETRIES", "0"))
     postgres_dsn: str | None = os.getenv("POSTGRES_DSN", "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/contract_agent")
+    # Deprecated runtime switch: backend is forced to postgres in repository factory.
+    workbench_backend: str = os.getenv("WORKBENCH_BACKEND", "postgres")
     max_upload_size_bytes: int = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", str(5 * 1024 * 1024)))
+    max_avatar_upload_size_bytes: int = int(os.getenv("MAX_AVATAR_UPLOAD_SIZE_BYTES", str(2 * 1024 * 1024)))
     max_redraft_chunk_chars: int = int(os.getenv("MAX_REDRAFT_CHUNK_CHARS", "12000"))
+    auth_session_ttl_hours: int = int(os.getenv("AUTH_SESSION_TTL_HOURS", "72"))
+    bootstrap_admin_username: str = os.getenv("BOOTSTRAP_ADMIN_USERNAME", "admin")
+    bootstrap_admin_password: str = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "admin123")
+    bootstrap_admin_display_name: str = os.getenv("BOOTSTRAP_ADMIN_DISPLAY_NAME", "系统管理员")
 
 
 settings = Settings()
