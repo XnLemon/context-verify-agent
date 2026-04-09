@@ -115,10 +115,13 @@ class PostgresWorkbenchRepository(IWorkbenchRepository):
                     )
                 )
 
-    def get_chat_thread(self, contract_id: str) -> StoredChatThread:
+    def get_chat_thread(self, contract_id: str, member_id: int = 0) -> StoredChatThread:
         with session_scope() as session:
             thread = session.scalar(
-                select(ChatThreadModel).where(ChatThreadModel.contract_id == contract_id)
+                select(ChatThreadModel).where(
+                    ChatThreadModel.contract_id == contract_id,
+                    ChatThreadModel.member_id == member_id,
+                )
             )
             if thread is None:
                 return StoredChatThread(contract_id=contract_id)
@@ -126,15 +129,19 @@ class PostgresWorkbenchRepository(IWorkbenchRepository):
             messages = [self._to_chat_message(item) for item in sorted(thread.messages, key=lambda msg: msg.id)]
             return StoredChatThread(contract_id=contract_id, messages=messages)
 
-    def save_chat_thread(self, thread: StoredChatThread) -> None:
+    def save_chat_thread(self, thread: StoredChatThread, member_id: int = 0) -> None:
         with session_scope() as session:
             db_thread = session.scalar(
-                select(ChatThreadModel).where(ChatThreadModel.contract_id == thread.contract_id)
+                select(ChatThreadModel).where(
+                    ChatThreadModel.contract_id == thread.contract_id,
+                    ChatThreadModel.member_id == member_id,
+                )
             )
             now = datetime.now(timezone.utc)
             if db_thread is None:
                 db_thread = ChatThreadModel(
                     contract_id=thread.contract_id,
+                    member_id=member_id,
                     created_at=now,
                     updated_at=now,
                 )
@@ -157,21 +164,30 @@ class PostgresWorkbenchRepository(IWorkbenchRepository):
                     )
                 )
 
-    def get_history(self, contract_id: str) -> StoredHistoryLog:
+    def get_history(self, contract_id: str, member_id: int = 0) -> StoredHistoryLog:
         with session_scope() as session:
             rows = session.scalars(
-                select(HistoryLogModel).where(HistoryLogModel.contract_id == contract_id)
+                select(HistoryLogModel).where(
+                    HistoryLogModel.contract_id == contract_id,
+                    HistoryLogModel.member_id == member_id,
+                )
             ).all()
             items = [self._to_history_item(row) for row in rows]
             return StoredHistoryLog(contract_id=contract_id, items=items)
 
-    def save_history(self, history: StoredHistoryLog) -> None:
+    def save_history(self, history: StoredHistoryLog, member_id: int = 0) -> None:
         with session_scope() as session:
-            session.execute(delete(HistoryLogModel).where(HistoryLogModel.contract_id == history.contract_id))
+            session.execute(
+                delete(HistoryLogModel).where(
+                    HistoryLogModel.contract_id == history.contract_id,
+                    HistoryLogModel.member_id == member_id,
+                )
+            )
             for item in history.items:
                 session.add(
                     HistoryLogModel(
                         contract_id=history.contract_id,
+                        member_id=member_id,
                         event_id=item.id,
                         type=item.type,
                         title=item.title,
@@ -181,11 +197,12 @@ class PostgresWorkbenchRepository(IWorkbenchRepository):
                     )
                 )
 
-    def append_history_item(self, contract_id: str, item: WorkbenchHistoryItem) -> StoredHistoryLog:
+    def append_history_item(self, contract_id: str, item: WorkbenchHistoryItem, member_id: int = 0) -> StoredHistoryLog:
         with session_scope() as session:
             session.add(
                 HistoryLogModel(
                     contract_id=contract_id,
+                    member_id=member_id,
                     event_id=item.id,
                     type=item.type,
                     title=item.title,
@@ -195,7 +212,10 @@ class PostgresWorkbenchRepository(IWorkbenchRepository):
                 )
             )
             rows = session.scalars(
-                select(HistoryLogModel).where(HistoryLogModel.contract_id == contract_id)
+                select(HistoryLogModel).where(
+                    HistoryLogModel.contract_id == contract_id,
+                    HistoryLogModel.member_id == member_id,
+                )
             ).all()
             items = [self._to_history_item(row) for row in rows]
             return StoredHistoryLog(contract_id=contract_id, items=items)
@@ -274,5 +294,3 @@ class PostgresWorkbenchRepository(IWorkbenchRepository):
             createdAt=row.created_at,
             metadata=dict(row.metadata_json or {}),
         )
-
-

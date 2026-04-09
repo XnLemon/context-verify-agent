@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -413,6 +413,7 @@ async def import_workbench_contract(
             contract_type=contract_type,
             author=author or member.display_name,
             owner_username=member.username,
+            current_member=member,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

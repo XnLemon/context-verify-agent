@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -109,7 +109,8 @@ class WorkbenchService:
     ) -> WorkbenchContractDetailResponse:
         contract = self._require_contract(contract_id, current_member)
         review = self.repository.get_review(contract_id)
-        chat_thread = self.repository.get_chat_thread(contract_id)
+        member_scope_id = self._member_scope_id(current_member)
+        chat_thread = self.repository.get_chat_thread(contract_id, member_id=member_scope_id)
         return WorkbenchContractDetailResponse(
             contract=self._to_list_item(contract),
             latestReview=self._to_review_result(review) if review else None,
@@ -147,6 +148,7 @@ class WorkbenchService:
                 description=f"识别到 {stored_review.summary.risk_count} 项风险，整体等级 {stored_review.summary.overall_risk}。",
                 metadata={"overall_risk": stored_review.summary.overall_risk},
             ),
+            member_id=self._member_scope_id(current_member),
         )
         return WorkbenchScanResponse(
             contract=self._to_list_item(contract),
@@ -161,7 +163,8 @@ class WorkbenchService:
         current_member: MemberPublic | None = None,
     ) -> WorkbenchChatResponse:
         contract = self._require_contract(contract_id, current_member)
-        existing_thread = self.repository.get_chat_thread(contract_id)
+        member_scope_id = self._member_scope_id(current_member)
+        existing_thread = self.repository.get_chat_thread(contract_id, member_id=member_scope_id)
         messages = list(payload.messages) if payload.messages else list(existing_thread.messages)
 
         if payload.message:
@@ -180,7 +183,10 @@ class WorkbenchService:
         )
         assistant_message = self._chat_message(role="assistant", content=chat_response.answer)
         messages.append(assistant_message)
-        self.repository.save_chat_thread(StoredChatThread(contract_id=contract_id, messages=messages))
+        self.repository.save_chat_thread(
+            StoredChatThread(contract_id=contract_id, messages=messages),
+            member_id=member_scope_id,
+        )
 
         latest_review = None
         if chat_response.review_result is not None:
@@ -199,6 +205,7 @@ class WorkbenchService:
                     description=f"AI 对话触发复审，识别到 {stored_review.summary.risk_count} 项风险。",
                     metadata={"tool_used": chat_response.tool_used},
                 ),
+                member_id=self._member_scope_id(current_member),
             )
 
         self.repository.append_history_item(
@@ -209,6 +216,7 @@ class WorkbenchService:
                 description=messages[-2].content if len(messages) >= 2 else assistant_message.content,
                 metadata={"tool_used": chat_response.tool_used, "intent": chat_response.intent},
             ),
+            member_id=self._member_scope_id(current_member),
         )
 
         return WorkbenchChatResponse(
@@ -253,6 +261,7 @@ class WorkbenchService:
                     description=f"问题 {issue_id} 已标记为 {payload.status}。",
                     metadata={"issue_id": issue_id, "status": payload.status},
                 ),
+                member_id=self._member_scope_id(current_member),
             )
 
             if payload.auto_redraft and payload.status == "accepted":
@@ -305,6 +314,7 @@ class WorkbenchService:
                     description=f"已基于 {len(accepted_issues)} 条采纳建议生成合同修订稿。",
                     metadata={"accepted_issue_count": str(len(accepted_issues))},
                 ),
+                member_id=self._member_scope_id(current_member),
             )
 
             return WorkbenchRedraftResponse(
@@ -315,7 +325,7 @@ class WorkbenchService:
 
     def get_history(self, contract_id: str, current_member: MemberPublic | None = None) -> list[WorkbenchHistoryItem]:
         self._require_contract(contract_id, current_member)
-        history = self.repository.get_history(contract_id)
+        history = self.repository.get_history(contract_id, member_id=self._member_scope_id(current_member))
         return sorted(history.items, key=lambda item: item.createdAt, reverse=True)
 
     def update_contract_content(
@@ -341,6 +351,7 @@ class WorkbenchService:
                     description="已手动更新合同正文，建议重新执行扫描。",
                     metadata={"content_length": str(len(content))},
                 ),
+                member_id=self._member_scope_id(current_member),
             )
             return WorkbenchContractUpdateResponse(contract=self._to_list_item(contract))
 
@@ -375,6 +386,7 @@ class WorkbenchService:
                         "operator": operator_name,
                     },
                 ),
+                member_id=self._member_scope_id(current_member),
             )
             return WorkbenchFinalDecisionResponse(
                 contract=self._to_list_item(contract),
@@ -389,6 +401,7 @@ class WorkbenchService:
         contract_type: str | None = None,
         author: str = "系统导入",
         owner_username: str | None = None,
+        current_member: MemberPublic | None = None,
     ) -> WorkbenchImportResponse:
         parsed = self.review_service.parse_file(file_name, content)
         contract = self.repository.create_contract(
@@ -408,6 +421,7 @@ class WorkbenchService:
                 description=f"已从文件 {file_name} 导入合同。",
                 metadata={"file_name": file_name},
             ),
+            member_id=self._member_scope_id(current_member),
         )
         return WorkbenchImportResponse(contract=self._to_list_item(contract))
 
@@ -428,7 +442,11 @@ class WorkbenchService:
                     description=f"自动修订未完成：{exc}",
                     metadata={"status": "failed"},
                 ),
+                member_id=self._member_scope_id(current_member),
             )
+
+    def _member_scope_id(self, member: MemberPublic | None) -> int:
+        return member.id if member is not None else 0
 
     def _require_contract_editor(self) -> ContractEditor:
         if not settings.qwen_api_key:

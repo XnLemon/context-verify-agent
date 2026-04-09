@@ -1,7 +1,8 @@
-﻿import tempfile
+import tempfile
 import unittest
 from datetime import datetime, timezone
 
+from app.schemas.auth import MemberPublic
 from app.schemas.chat import ChatResponse
 from app.schemas.document import DocumentMetadata, ParsedDocument
 from app.schemas.review import ExtractedFields, ReviewReport, ReviewResponse, ReviewSummary, RiskItem
@@ -88,6 +89,25 @@ class WorkbenchServiceTests(unittest.TestCase):
             review_service=FakeReviewService(),
             chat_service=self.chat_service,
         )
+        now = datetime.now(timezone.utc)
+        self.member_a = MemberPublic(
+            id=101,
+            username="user_a",
+            display_name="User A",
+            role="employee",
+            member_type="legal",
+            is_active=True,
+            created_at=now,
+        )
+        self.member_b = MemberPublic(
+            id=102,
+            username="user_b",
+            display_name="User B",
+            role="employee",
+            member_type="legal",
+            is_active=True,
+            created_at=now,
+        )
 
     def tearDown(self) -> None:
         self.tempdir.cleanup()
@@ -145,6 +165,28 @@ class WorkbenchServiceTests(unittest.TestCase):
         self.assertEqual(response.intent, "review")
         self.assertIsNotNone(response.latestReview)
         self.assertIsNotNone(detail.latestReview)
+
+    def test_chat_thread_is_isolated_by_member_on_same_contract(self) -> None:
+        self.service.chat_contract(
+            "contract-001",
+            payload=WorkbenchChatRequest(message="A 的私有提问"),
+            current_member=self.member_a,
+        )
+
+        detail_a = self.service.get_contract_detail("contract-001", current_member=self.member_a)
+        detail_b = self.service.get_contract_detail("contract-001", current_member=self.member_b)
+
+        self.assertEqual(len(detail_a.chatMessages), 2)
+        self.assertEqual(len(detail_b.chatMessages), 0)
+
+    def test_history_is_isolated_by_member_on_same_contract(self) -> None:
+        self.service.scan_contract("contract-001", current_member=self.member_a)
+
+        history_a = self.service.get_history("contract-001", current_member=self.member_a)
+        history_b = self.service.get_history("contract-001", current_member=self.member_b)
+
+        self.assertGreaterEqual(len(history_a), 1)
+        self.assertEqual(len(history_b), 0)
 
     def test_import_contract_creates_new_record(self) -> None:
         response = self.service.import_contract(file_name="new.txt", content="����ĺ�ͬ����".encode("utf-8"))

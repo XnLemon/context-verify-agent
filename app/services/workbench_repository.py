@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -53,32 +53,38 @@ class WorkbenchRepository(IWorkbenchRepository):
         path = self.reviews_dir / f"{review.contract_id}.json"
         self._write_json_file(path, review.model_dump(mode="json"))
 
-    def get_chat_thread(self, contract_id: str) -> StoredChatThread:
-        path = self.chats_dir / f"{contract_id}.json"
+    def get_chat_thread(self, contract_id: str, member_id: int = 0) -> StoredChatThread:
+        path = self.chats_dir / f"{self._scope_key(contract_id, member_id)}.json"
         payload = self._read_json_file(path, default=None)
+        if payload is None and member_id == 0:
+            legacy_path = self.chats_dir / f"{contract_id}.json"
+            payload = self._read_json_file(legacy_path, default=None)
         if payload is None:
             return StoredChatThread(contract_id=contract_id)
         return StoredChatThread.model_validate(payload)
 
-    def save_chat_thread(self, thread: StoredChatThread) -> None:
-        path = self.chats_dir / f"{thread.contract_id}.json"
+    def save_chat_thread(self, thread: StoredChatThread, member_id: int = 0) -> None:
+        path = self.chats_dir / f"{self._scope_key(thread.contract_id, member_id)}.json"
         self._write_json_file(path, thread.model_dump(mode="json"))
 
-    def get_history(self, contract_id: str) -> StoredHistoryLog:
-        path = self.history_dir / f"{contract_id}.json"
+    def get_history(self, contract_id: str, member_id: int = 0) -> StoredHistoryLog:
+        path = self.history_dir / f"{self._scope_key(contract_id, member_id)}.json"
         payload = self._read_json_file(path, default=None)
+        if payload is None and member_id == 0:
+            legacy_path = self.history_dir / f"{contract_id}.json"
+            payload = self._read_json_file(legacy_path, default=None)
         if payload is None:
             return StoredHistoryLog(contract_id=contract_id)
         return StoredHistoryLog.model_validate(payload)
 
-    def save_history(self, history: StoredHistoryLog) -> None:
-        path = self.history_dir / f"{history.contract_id}.json"
+    def save_history(self, history: StoredHistoryLog, member_id: int = 0) -> None:
+        path = self.history_dir / f"{self._scope_key(history.contract_id, member_id)}.json"
         self._write_json_file(path, history.model_dump(mode="json"))
 
-    def append_history_item(self, contract_id: str, item: WorkbenchHistoryItem) -> StoredHistoryLog:
-        history = self.get_history(contract_id)
+    def append_history_item(self, contract_id: str, item: WorkbenchHistoryItem, member_id: int = 0) -> StoredHistoryLog:
+        history = self.get_history(contract_id, member_id=member_id)
         history.items.append(item)
-        self.save_history(history)
+        self.save_history(history, member_id=member_id)
         return history
 
     def create_contract(
@@ -168,6 +174,9 @@ class WorkbenchRepository(IWorkbenchRepository):
             },
         ]
         return [WorkbenchContract.model_validate(item) for item in samples]
+
+    def _scope_key(self, contract_id: str, member_id: int) -> str:
+        return f"{contract_id}--m{member_id}"
 
     def _read_json_file(self, path: Path, default):
         with self._lock:

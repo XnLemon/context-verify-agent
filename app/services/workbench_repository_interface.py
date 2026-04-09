@@ -21,19 +21,19 @@ class IWorkbenchRepository(Protocol):
     def save_review(self, review: StoredReviewRecord) -> None:
         ...
 
-    def get_chat_thread(self, contract_id: str) -> StoredChatThread:
+    def get_chat_thread(self, contract_id: str, member_id: int = 0) -> StoredChatThread:
         ...
 
-    def save_chat_thread(self, thread: StoredChatThread) -> None:
+    def save_chat_thread(self, thread: StoredChatThread, member_id: int = 0) -> None:
         ...
 
-    def get_history(self, contract_id: str) -> StoredHistoryLog:
+    def get_history(self, contract_id: str, member_id: int = 0) -> StoredHistoryLog:
         ...
 
-    def save_history(self, history: StoredHistoryLog) -> None:
+    def save_history(self, history: StoredHistoryLog, member_id: int = 0) -> None:
         ...
 
-    def append_history_item(self, contract_id: str, item: WorkbenchHistoryItem) -> StoredHistoryLog:
+    def append_history_item(self, contract_id: str, item: WorkbenchHistoryItem, member_id: int = 0) -> StoredHistoryLog:
         ...
 
     def create_contract(
@@ -48,5 +48,3 @@ class IWorkbenchRepository(Protocol):
         source_file_name: str | None = None,
     ) -> WorkbenchContract:
         ...
-
-

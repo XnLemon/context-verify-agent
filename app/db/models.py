@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -88,8 +88,8 @@ class ChatThreadModel(Base):
         Text,
         ForeignKey("contracts.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
     )
+    member_id: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
@@ -97,6 +97,10 @@ class ChatThreadModel(Base):
         back_populates="thread",
         cascade="all, delete-orphan",
         lazy="joined",
+    )
+
+    __table_args__ = (
+        UniqueConstraint("contract_id", "member_id", name="uq_chat_thread_contract_member"),
     )
 
 
@@ -128,6 +132,7 @@ class HistoryLogModel(Base):
         ForeignKey("contracts.id", ondelete="CASCADE"),
         nullable=False,
     )
+    member_id: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     event_id: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
@@ -191,10 +196,7 @@ Index("idx_contracts_status_updated_at", ContractModel.status, ContractModel.upd
 Index("idx_contracts_owner_updated_at", ContractModel.owner_username, ContractModel.updated_at)
 Index("idx_review_issues_contract_status_severity", ReviewIssueModel.contract_id, ReviewIssueModel.status, ReviewIssueModel.severity)
 Index("idx_chat_messages_contract_created_at", ChatMessageModel.contract_id, ChatMessageModel.created_at)
-Index("idx_history_logs_contract_created_at", HistoryLogModel.contract_id, HistoryLogModel.created_at.desc())
+Index("idx_history_logs_contract_member_created_at", HistoryLogModel.contract_id, HistoryLogModel.member_id, HistoryLogModel.created_at.desc())
 Index("idx_members_role_active", MemberModel.role, MemberModel.is_active)
 Index("idx_auth_sessions_member_expires", AuthSessionModel.member_id, AuthSessionModel.expires_at)
 Index("idx_login_audits_member_login_at", LoginAuditModel.member_id, LoginAuditModel.login_at.desc())
-
-
-
