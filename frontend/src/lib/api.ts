@@ -221,6 +221,146 @@ export function sendWorkbenchChatMessage(contractId: string, message: string) {
   });
 }
 
+type ChatStreamStartEvent = {
+  id: string;
+  timestamp: string;
+};
+
+type ChatStreamDeltaEvent = {
+  delta: string;
+};
+
+type ChatStreamErrorEvent = {
+  error: string;
+};
+
+export async function sendWorkbenchChatMessageStream(
+  contractId: string,
+  message: string,
+  handlers?: {
+    onStart?: (event: ChatStreamStartEvent) => void;
+    onDelta?: (event: ChatStreamDeltaEvent) => void;
+  },
+) {
+  const token = getAuthToken();
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const response = await fetch(`${API_BASE_URL}/api/workbench/contracts/${contractId}/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeader,
+    },
+    body: JSON.stringify({ message }),
+  });
+
+  if (!response.ok) {
+    let detail = `${response.status} ${response.statusText}`;
+    try {
+      const payload = await response.json();
+      detail = payload.detail ?? detail;
+    } catch {
+      // Ignore JSON parse failures and fall back to status text.
+    }
+    throw new Error(detail);
+  }
+
+  if (!response.body) {
+    throw new Error('当前浏览器不支持流式响应。');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let finalPayload: ChatResponse | null = null;
+
+  const findBoundary = (value: string) => {
+    const lf = value.indexOf('\n\n');
+    const crlf = value.indexOf('\r\n\r\n');
+    if (lf === -1) {
+      return { index: crlf, length: crlf === -1 ? 0 : 4 };
+    }
+    if (crlf === -1) {
+      return { index: lf, length: 2 };
+    }
+    return lf < crlf ? { index: lf, length: 2 } : { index: crlf, length: 4 };
+  };
+
+  const processBlock = (block: string) => {
+    const lines = block
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      return;
+    }
+
+    let event = 'message';
+    const dataLines: string[] = [];
+
+    for (const line of lines) {
+      if (line.startsWith('event:')) {
+        event = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trim());
+      }
+    }
+
+    if (dataLines.length === 0) {
+      return;
+    }
+
+    const raw = dataLines.join('\n');
+
+    if (event === 'start') {
+      handlers?.onStart?.(JSON.parse(raw) as ChatStreamStartEvent);
+      return;
+    }
+
+    if (event === 'delta') {
+      handlers?.onDelta?.(JSON.parse(raw) as ChatStreamDeltaEvent);
+      return;
+    }
+
+    if (event === 'done') {
+      finalPayload = JSON.parse(raw) as ChatResponse;
+      return;
+    }
+
+    if (event === 'error') {
+      const errorPayload = JSON.parse(raw) as ChatStreamErrorEvent;
+      throw new Error(errorPayload.error || '流式聊天失败。');
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      buffer += decoder.decode();
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary = findBoundary(buffer);
+    while (boundary.index !== -1) {
+      const block = buffer.slice(0, boundary.index);
+      processBlock(block);
+      buffer = buffer.slice(boundary.index + boundary.length);
+      boundary = findBoundary(buffer);
+    }
+  }
+
+  const tail = buffer.trim();
+  if (tail) {
+    processBlock(tail);
+  }
+
+  if (!finalPayload) {
+    throw new Error('流式响应未返回完整结果。');
+  }
+
+  return finalPayload;
+}
+
 export function updateWorkbenchIssueStatus(
   contractId: string,
   issueId: string,

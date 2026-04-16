@@ -27,6 +27,7 @@ public class AppProperties {
         private String provider = "grpc";
         private String grpcTarget = "127.0.0.1:50051";
         private long timeoutMillis = 15000;
+        private long streamTimeoutMillis = 30000;
 
         public String getProvider() { return provider; }
         public void setProvider(String provider) { this.provider = provider; }
@@ -34,6 +35,8 @@ public class AppProperties {
         public void setGrpcTarget(String grpcTarget) { this.grpcTarget = grpcTarget; }
         public long getTimeoutMillis() { return timeoutMillis; }
         public void setTimeoutMillis(long timeoutMillis) { this.timeoutMillis = timeoutMillis; }
+        public long getStreamTimeoutMillis() { return streamTimeoutMillis; }
+        public void setStreamTimeoutMillis(long streamTimeoutMillis) { this.streamTimeoutMillis = streamTimeoutMillis; }
     }
 
     public String getDefaultContractType() { return defaultContractType; }

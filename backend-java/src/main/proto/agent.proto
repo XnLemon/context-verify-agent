@@ -11,6 +11,7 @@ service AgentRpcService {
   rpc ParseFile(ParseFileRequest) returns (JsonResponse);
   rpc Review(ReviewRequest) returns (JsonResponse);
   rpc Chat(ChatRequest) returns (JsonResponse);
+  rpc ChatStream(ChatRequest) returns (stream ChatStreamResponse);
   rpc Redraft(RedraftRequest) returns (JsonResponse);
 }
 
@@ -58,4 +59,9 @@ message JsonResponse {
   int32 code = 1;
   string json = 2;
   string error = 3;
+}
+
+message ChatStreamResponse {
+  string event = 1;
+  string data_json = 2;
 }

@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Consumer;
 
 @Service
 public class WorkbenchService {
@@ -124,7 +125,7 @@ public class WorkbenchService {
         contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
-        int historyCount = appendHistory(contractId, currentMember, "scan", "完成合同扫描", "完成扫描。", Map.of("overall_risk", String.valueOf(((Map<String, Object>) review.get("summary")).get("overall_risk"))));
+        int historyCount = appendHistory(contractId, currentMember, "scan", "完成合同扫描", "已完成扫描。", Map.of("overall_risk", String.valueOf(((Map<String, Object>) review.get("summary")).get("overall_risk"))));
         return Map.of(
                 "contract", toContractListItem(contract),
                 "latestReview", toReviewResult(stored),
@@ -133,21 +134,81 @@ public class WorkbenchService {
     }
 
     public Map<String, Object> chatContract(String contractId, Map<String, Object> payload, Member currentMember) {
+        ChatContext chatContext = prepareChatContext(contractId, payload, currentMember);
+        Map<String, Object> chat = agentGateway.chat(chatContext.chatPayload());
+        return finalizeChat(contractId, chatContext, chat, currentMember, null);
+    }
+
+    public void chatContractStream(
+            String contractId,
+            Map<String, Object> payload,
+            Member currentMember,
+            Consumer<AgentGateway.ChatStreamEvent> eventConsumer
+    ) {
+        ChatContext chatContext = prepareChatContext(contractId, payload, currentMember);
+        Map<String, Object> streamAssistant = chatMessage("assistant", "");
+        eventConsumer.accept(new AgentGateway.ChatStreamEvent(
+                "start",
+                Jsons.toJson(Map.of(
+                        "id", asString(streamAssistant.get("id")),
+                        "timestamp", asString(streamAssistant.get("timestamp"))
+                ))
+        ));
+
+        StringBuilder streamedAnswer = new StringBuilder();
+        Map<String, Object> donePayload = null;
+        Iterator<AgentGateway.ChatStreamEvent> events = agentGateway.chatStream(chatContext.chatPayload());
+
+        while (events.hasNext()) {
+            AgentGateway.ChatStreamEvent event = events.next();
+            String eventName = event.event() == null ? "" : event.event();
+            if ("delta".equals(eventName)) {
+                Map<String, Object> data = parseEventData(event.dataJson());
+                streamedAnswer.append(asString(data.get("delta")));
+                eventConsumer.accept(event);
+                continue;
+            }
+            if ("done".equals(eventName)) {
+                donePayload = Jsons.toMap(event.dataJson());
+                continue;
+            }
+            if ("error".equals(eventName)) {
+                eventConsumer.accept(event);
+                return;
+            }
+        }
+
+        if (donePayload == null) {
+            donePayload = new LinkedHashMap<>();
+            donePayload.put("intent", "chat");
+            donePayload.put("tool_used", "chat_stream_fallback");
+            donePayload.put("answer", streamedAnswer.toString());
+            donePayload.put("review_result", null);
+        }
+
+        Map<String, Object> finalPayload = finalizeChat(contractId, chatContext, donePayload, currentMember, streamAssistant);
+        eventConsumer.accept(new AgentGateway.ChatStreamEvent("done", Jsons.toJson(finalPayload)));
+    }
+
+    private ChatContext prepareChatContext(String contractId, Map<String, Object> payload, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         int memberId = memberScopeId(currentMember);
         List<Map<String, Object>> messages = new ArrayList<>();
         Object payloadMsgs = payload.get("messages");
         if (payloadMsgs instanceof List<?> m && !m.isEmpty()) {
-            for (Object item : m) messages.add((Map<String, Object>) item);
+            for (Object item : m) {
+                messages.add((Map<String, Object>) item);
+            }
         } else {
             messages.addAll(repository.getChatMessages(contractId, memberId));
         }
+
         String message = asString(payload.get("message"));
         if (!message.isBlank()) {
             messages.add(chatMessage("user", message));
         }
         if (messages.isEmpty()) {
-            throw new ApiException(400, "至少需要一条用户消息。");
+            throw new ApiException(400, "At least one user message is required.");
         }
 
         Map<String, Object> chatPayload = new LinkedHashMap<>();
@@ -155,11 +216,31 @@ public class WorkbenchService {
         chatPayload.put("contract_text", contract.get("content"));
         chatPayload.put("contract_type", payload.getOrDefault("contract_type", contract.get("type")));
         chatPayload.put("our_side", payload.getOrDefault("our_side", "甲方"));
-        Map<String, Object> chat = agentGateway.chat(chatPayload);
 
-        Map<String, Object> assistant = chatMessage("assistant", asString(chat.get("answer")));
-        messages.add(assistant);
-        repository.saveChatMessages(contractId, memberId, messages);
+        return new ChatContext(contract, memberId, messages, chatPayload);
+    }
+
+    private Map<String, Object> finalizeChat(
+            String contractId,
+            ChatContext chatContext,
+            Map<String, Object> chat,
+            Member currentMember,
+            Map<String, Object> prebuiltAssistant
+    ) {
+        String answer = asString(chat.get("answer"));
+        Map<String, Object> assistant = prebuiltAssistant == null ? chatMessage("assistant", answer) : new LinkedHashMap<>(prebuiltAssistant);
+        assistant.put("role", "assistant");
+        assistant.put("content", answer);
+        if (asString(assistant.get("id")).isBlank()) {
+            assistant.put("id", "msg-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+        }
+        if (asString(assistant.get("timestamp")).isBlank()) {
+            assistant.put("timestamp", OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("HH:mm")));
+        }
+        assistant.put("created_at", OffsetDateTime.now());
+
+        chatContext.messages().add(assistant);
+        repository.saveChatMessages(contractId, chatContext.memberId(), chatContext.messages());
 
         Object reviewObj = chat.get("review_result");
         Object latestReview = null;
@@ -177,21 +258,43 @@ public class WorkbenchService {
                     ));
             Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, previousStatuses);
             saveStoredReview(stored);
-            contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
-            contract.put("updated_at", OffsetDateTime.now());
-            repository.saveContract(contract);
+            chatContext.contract().put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
+            chatContext.contract().put("updated_at", OffsetDateTime.now());
+            repository.saveContract(chatContext.contract());
             latestReview = toReviewResult(stored);
         }
 
-        appendHistory(contractId, currentMember, "chat", "新增 AI 对话", asString(messages.get(messages.size() - 2).get("content")), Map.of("tool_used", asString(chat.get("tool_used"))));
+        appendHistory(
+                contractId,
+                currentMember,
+                "chat",
+                "新增 AI 对话",
+                asString(chatContext.messages().get(chatContext.messages().size() - 2).get("content")),
+                Map.of("tool_used", asString(chat.get("tool_used")))
+        );
+
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("intent", chat.getOrDefault("intent", "chat"));
         out.put("toolUsed", chat.getOrDefault("tool_used", "chat"));
         out.put("assistantMessage", assistant);
-        out.put("messages", messages);
+        out.put("messages", chatContext.messages());
         out.put("latestReview", latestReview);
         return out;
     }
+
+    private Map<String, Object> parseEventData(String dataJson) {
+        if (dataJson == null || dataJson.isBlank()) {
+            return Map.of();
+        }
+        return Jsons.toMap(dataJson);
+    }
+
+    private record ChatContext(
+            Map<String, Object> contract,
+            int memberId,
+            List<Map<String, Object>> messages,
+            Map<String, Object> chatPayload
+    ) {}
 
     public Map<String, Object> decideIssue(String contractId, String issueId, Map<String, Object> payload, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
@@ -224,7 +327,7 @@ public class WorkbenchService {
             autoRedraftAttempted = true;
             String ourSide = asString(payload.get("our_side"));
             if (ourSide.isBlank()) {
-                ourSide = "甲方";
+                ourSide = "鐢叉柟";
             }
             try {
                 redraftContract(contractId, ourSide, currentMember);
@@ -285,7 +388,7 @@ public class WorkbenchService {
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
         int historyCount = appendHistory(contractId, currentMember, "final_decision", "完成最终审批",
-                operatorName + " 将合同标记为 " + ("approved".equals(status) ? "通过" : "驳回") + (comment != null && !comment.isBlank() ? "。 备注：" + comment : "。"),
+                operatorName + " 将合同标记为 " + ("approved".equals(status) ? "通过" : "驳回") + (comment != null && !comment.isBlank() ? "。备注：" + comment : "。"),
                 Map.of("status", status, "operator", operatorName));
         return Map.of("contract", toContractListItem(contract), "historyCount", historyCount);
     }
@@ -393,7 +496,7 @@ public class WorkbenchService {
     }
 
     private String mapIssueType(String domain, String severity) {
-        if (domain.contains("主体") || domain.contains("合规") || domain.contains("资质")) {
+        if (domain.contains("涓讳綋") || domain.contains("鍚堣") || domain.contains("璧勮川")) {
             return "compliance";
         }
         if ("low".equals(severity)) {
@@ -442,3 +545,9 @@ public class WorkbenchService {
         return value != null && Boolean.parseBoolean(value.toString());
     }
 }
+
+
+
+
+
+

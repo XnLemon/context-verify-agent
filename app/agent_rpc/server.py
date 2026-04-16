@@ -79,6 +79,26 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
         except RuntimeError as exc:
             return agent_pb2.JsonResponse(code=503, error=str(exc))
 
+    def ChatStream(self, request, context):
+        try:
+            payload = json.loads(request.payload_json)
+            chat_request = ChatRequest.model_validate(payload)
+            for event in self.chat_service.chat_stream(chat_request):
+                yield agent_pb2.ChatStreamResponse(
+                    event=str(event.get("event", "message")),
+                    data_json=json.dumps(event.get("data", {}), ensure_ascii=False),
+                )
+        except ValueError as exc:
+            yield agent_pb2.ChatStreamResponse(
+                event="error",
+                data_json=json.dumps({"error": str(exc)}, ensure_ascii=False),
+            )
+        except RuntimeError as exc:
+            yield agent_pb2.ChatStreamResponse(
+                event="error",
+                data_json=json.dumps({"error": str(exc)}, ensure_ascii=False),
+            )
+
     def Redraft(self, request, context):
         try:
             accepted_issues = json.loads(request.accepted_issues_json)

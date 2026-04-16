@@ -8,6 +8,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -16,11 +17,13 @@ public class GrpcAgentGateway implements AgentGateway {
     private final ManagedChannel channel;
     private final AgentRpcServiceGrpc.AgentRpcServiceBlockingStub stub;
     private final long timeoutMillis;
+    private final long streamTimeoutMillis;
 
-    public GrpcAgentGateway(String target, long timeoutMillis) {
+    public GrpcAgentGateway(String target, long timeoutMillis, long streamTimeoutMillis) {
         this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         this.stub = AgentRpcServiceGrpc.newBlockingStub(channel);
         this.timeoutMillis = timeoutMillis;
+        this.streamTimeoutMillis = streamTimeoutMillis;
     }
 
     @Override
@@ -63,6 +66,25 @@ public class GrpcAgentGateway implements AgentGateway {
     }
 
     @Override
+    public Iterator<ChatStreamEvent> chatStream(Map<String, Object> payload) {
+        Iterator<ChatStreamResponse> stream = callStream(() -> withStreamTimeout().chatStream(
+                ChatRequest.newBuilder().setPayloadJson(Jsons.toJson(payload)).build()
+        ));
+        return new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return stream.hasNext();
+            }
+
+            @Override
+            public ChatStreamEvent next() {
+                ChatStreamResponse next = stream.next();
+                return new ChatStreamEvent(next.getEvent(), next.getDataJson());
+            }
+        };
+    }
+
+    @Override
     public String redraft(String contractText, String contractType, String ourSide, List<Map<String, String>> acceptedIssues) {
         JsonResponse res = call(() -> withTimeout().redraft(RedraftRequest.newBuilder()
                 .setContractText(contractText)
@@ -78,7 +100,7 @@ public class GrpcAgentGateway implements AgentGateway {
         try {
             return call.exec();
         } catch (StatusRuntimeException ex) {
-            throw new ApiException(503, "Agent RPC 调用失败: " + ex.getStatus().getDescription());
+            throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
         }
     }
 
@@ -86,7 +108,15 @@ public class GrpcAgentGateway implements AgentGateway {
         try {
             return call.exec();
         } catch (StatusRuntimeException ex) {
-            throw new ApiException(503, "Agent RPC 调用失败: " + ex.getStatus().getDescription());
+            throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
+        }
+    }
+
+    private Iterator<ChatStreamResponse> callStream(StreamCall call) {
+        try {
+            return call.exec();
+        } catch (StatusRuntimeException ex) {
+            throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
         }
     }
 
@@ -102,7 +132,17 @@ public class GrpcAgentGateway implements AgentGateway {
     }
 
     private AgentRpcServiceGrpc.AgentRpcServiceBlockingStub withTimeout() {
+        if (timeoutMillis <= 0) {
+            return stub;
+        }
         return stub.withDeadlineAfter(timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private AgentRpcServiceGrpc.AgentRpcServiceBlockingStub withStreamTimeout() {
+        if (streamTimeoutMillis <= 0) {
+            return stub;
+        }
+        return stub.withDeadlineAfter(streamTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @FunctionalInterface
@@ -114,4 +154,10 @@ public class GrpcAgentGateway implements AgentGateway {
     interface HealthCall {
         HealthResponse exec();
     }
+
+    @FunctionalInterface
+    interface StreamCall {
+        Iterator<ChatStreamResponse> exec();
+    }
 }
+

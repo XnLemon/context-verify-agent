@@ -24,7 +24,7 @@ import {
   redraftWorkbenchContract,
   scanWorkbenchContract,
   updateWorkbenchContractContent,
-  sendWorkbenchChatMessage,
+  sendWorkbenchChatMessageStream,
   updateWorkbenchIssueStatus,
 } from '@/src/lib/api';
 import { canFinalizeContract, canUploadOrEditContract } from '@/src/lib/permissions';
@@ -188,15 +188,52 @@ export default function Review({
   }
 
   async function handleSendMessage() {
-    if (!contractId || !inputMessage.trim()) {
+    if (!contractId || !inputMessage.trim() || isSending) {
       return;
     }
 
+    const outgoing = inputMessage.trim();
+    const localUserId = `local-user-${Date.now()}`;
+    const localAssistantId = `local-assistant-${Date.now()}`;
+
+    setChatMessages((prev) => [
+      ...prev,
+      { id: localUserId, role: 'user', content: outgoing, timestamp: formatTimeOnly(new Date()) },
+      { id: localAssistantId, role: 'assistant', content: '', timestamp: formatTimeOnly(new Date()) },
+    ]);
+    setInputMessage('');
     setIsSending(true);
     setError(null);
     try {
-      const response = await sendWorkbenchChatMessage(contractId, inputMessage.trim());
-      setInputMessage('');
+      const response = await sendWorkbenchChatMessageStream(contractId, outgoing, {
+        onStart: ({ id, timestamp }) => {
+          setChatMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === localAssistantId
+                ? {
+                    ...msg,
+                    // Keep local placeholder id until `done` to ensure `onDelta`
+                    // can always target the same message.
+                    timestamp: timestamp || msg.timestamp,
+                  }
+                : msg,
+            ),
+          );
+        },
+        onDelta: ({ delta }) => {
+          setChatMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === localAssistantId
+                ? {
+                    ...msg,
+                    content: msg.content + delta,
+                  }
+                : msg,
+            ),
+          );
+        },
+      });
+
       setChatMessages(response.messages);
       if (response.latestReview) {
         setLatestReview(response.latestReview);
@@ -205,7 +242,14 @@ export default function Review({
       setContract(detail.contract);
       await refreshHistory(contractId);
     } catch (chatError) {
-      setError(chatError instanceof Error ? chatError.message : '发送消息失败。');
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== localUserId && msg.id !== localAssistantId));
+      setInputMessage(outgoing);
+      const rawMessage = chatError instanceof Error ? chatError.message : '发送消息失败。';
+      if (rawMessage.toUpperCase().includes('DEADLINE_EXCEEDED')) {
+        setError('AI 响应超时，请稍后重试或将问题拆分后再提问。');
+      } else {
+        setError(rawMessage);
+      }
     } finally {
       setIsSending(false);
     }
@@ -897,6 +941,14 @@ function formatDateTime(value: string) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+  });
+}
+
+function formatTimeOnly(value: Date) {
+  return value.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   });
 }
 

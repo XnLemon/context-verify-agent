@@ -1,8 +1,10 @@
 package com.example.contract.service.agent;
 
 import com.example.contract.exception.ApiException;
+import com.example.contract.util.Jsons;
 
 import java.time.OffsetDateTime;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,22 @@ public class CustomStubAgentGateway implements AgentGateway {
         out.put("search_results", List.of());
         out.put("review_result", null);
         return out;
+    }
+
+    @Override
+    public Iterator<ChatStreamEvent> chatStream(Map<String, Object> payload) {
+        Map<String, Object> chat = chat(payload);
+        String answer = String.valueOf(chat.getOrDefault("answer", ""));
+        int chunkSize = 16;
+
+        List<ChatStreamEvent> events = new java.util.ArrayList<>();
+        events.add(new ChatStreamEvent("start", Jsons.toJson(Map.of("intent", "chat", "tool_used", "custom_stub"))));
+        for (int i = 0; i < answer.length(); i += chunkSize) {
+            String delta = answer.substring(i, Math.min(answer.length(), i + chunkSize));
+            events.add(new ChatStreamEvent("delta", Jsons.toJson(Map.of("delta", delta))));
+        }
+        events.add(new ChatStreamEvent("done", Jsons.toJson(chat)));
+        return events.iterator();
     }
 
     @Override

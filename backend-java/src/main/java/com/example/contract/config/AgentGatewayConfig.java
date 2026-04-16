@@ -14,6 +14,10 @@ public class AgentGatewayConfig {
         if ("custom".equalsIgnoreCase(provider)) {
             return new CustomStubAgentGateway();
         }
-        return new GrpcAgentGateway(props.getAgent().getRpc().getGrpcTarget(), props.getAgent().getRpc().getTimeoutMillis());
+        return new GrpcAgentGateway(
+                props.getAgent().getRpc().getGrpcTarget(),
+                props.getAgent().getRpc().getTimeoutMillis(),
+                props.getAgent().getRpc().getStreamTimeoutMillis()
+        );
     }
 }
