@@ -90,6 +90,14 @@ export interface ChatResponse {
   assistantMessage: ChatMessage;
   messages: ChatMessage[];
   latestReview: ReviewResult | null;
+  traceSummary?: ChatTraceSummaryItem[];
+}
+
+export interface ChatTraceSummaryItem {
+  step: number;
+  thought?: string;
+  action?: string;
+  observation?: string;
 }
 
 export interface ImportContractResponse {

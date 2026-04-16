@@ -5,6 +5,7 @@ import com.example.contract.exception.ApiException;
 import com.example.contract.model.Member;
 import com.example.contract.repository.WorkbenchRepository;
 import com.example.contract.service.agent.AgentGateway;
+import com.example.contract.util.Jsons;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -106,6 +107,69 @@ class WorkbenchServiceTest {
         assertEquals(false, autoRedraft.get("succeeded"));
         assertEquals("RuntimeException", autoRedraft.get("error"));
         verify(repository).saveReview(anyString(), anyMap(), anyString(), anyList(), anyList(), anyList(), any());
+    }
+
+    @Test
+    void chatContractStreamForwardsReasoningActionObservationAndDoneTraceSummary() {
+        String contractId = "c-stream-1";
+        when(repository.getContract(contractId)).thenReturn(Optional.of(contract(contractId)));
+        Map<String, Object> done = new LinkedHashMap<>();
+        done.put("intent", "chat");
+        done.put("tool_used", "react");
+        done.put("answer", "hello world");
+        done.put("review_result", null);
+        done.put("traceSummary", List.of(Map.of("step", 1, "thought", "x", "action", "query_knowledge", "observation", "y")));
+        when(agentGateway.chatStream(anyMap())).thenReturn(List.of(
+                new AgentGateway.ChatStreamEvent("reasoning", Jsons.toJson(Map.of("step", 1, "summary", "need external knowledge"))),
+                new AgentGateway.ChatStreamEvent("action", Jsons.toJson(Map.of("step", 1, "name", "query_knowledge", "input_preview", "termination clause"))),
+                new AgentGateway.ChatStreamEvent("observation", Jsons.toJson(Map.of("step", 1, "action", "query_knowledge", "success", true, "summary", "found 2 refs"))),
+                new AgentGateway.ChatStreamEvent("delta", Jsons.toJson(Map.of("delta", "hello "))),
+                new AgentGateway.ChatStreamEvent("done", Jsons.toJson(done))
+        ).iterator());
+
+        List<AgentGateway.ChatStreamEvent> emitted = new ArrayList<>();
+        service.chatContractStream(contractId, Map.of("message", "what is market practice"), member, emitted::add);
+
+        assertEquals("start", emitted.get(0).event());
+        assertEquals("reasoning", emitted.get(1).event());
+        assertEquals("action", emitted.get(2).event());
+        assertEquals("observation", emitted.get(3).event());
+        assertEquals("delta", emitted.get(4).event());
+        assertEquals("done", emitted.get(5).event());
+
+        Map<String, Object> donePayload = Jsons.toMap(emitted.get(5).dataJson());
+        assertEquals("react", donePayload.get("toolUsed"));
+        assertEquals("hello world", ((Map<String, Object>) donePayload.get("assistantMessage")).get("content"));
+        assertTrue(donePayload.containsKey("traceSummary"));
+        assertEquals(1, ((List<?>) donePayload.get("traceSummary")).size());
+    }
+
+    @Test
+    void chatContractStreamKeepsLegacyDeltaDoneBehaviorWhenOnlyLegacyEvents() {
+        String contractId = "c-stream-2";
+        when(repository.getContract(contractId)).thenReturn(Optional.of(contract(contractId)));
+        Map<String, Object> done = new LinkedHashMap<>();
+        done.put("intent", "chat");
+        done.put("tool_used", "legacy_stream");
+        done.put("review_result", null);
+        when(agentGateway.chatStream(anyMap())).thenReturn(List.of(
+                new AgentGateway.ChatStreamEvent("delta", Jsons.toJson(Map.of("delta", "A"))),
+                new AgentGateway.ChatStreamEvent("delta", Jsons.toJson(Map.of("delta", "B"))),
+                new AgentGateway.ChatStreamEvent("done", Jsons.toJson(done))
+        ).iterator());
+
+        List<AgentGateway.ChatStreamEvent> emitted = new ArrayList<>();
+        service.chatContractStream(contractId, Map.of("message", "ping"), member, emitted::add);
+
+        assertEquals("start", emitted.get(0).event());
+        assertEquals("delta", emitted.get(1).event());
+        assertEquals("delta", emitted.get(2).event());
+        assertEquals("done", emitted.get(3).event());
+
+        Map<String, Object> donePayload = Jsons.toMap(emitted.get(3).dataJson());
+        Map<String, Object> assistant = (Map<String, Object>) donePayload.get("assistantMessage");
+        assertEquals("AB", assistant.get("content"));
+        assertFalse(donePayload.containsKey("traceSummary"));
     }
 
     private Map<String, Object> contract(String id) {

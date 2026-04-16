@@ -34,6 +34,7 @@ class Settings(BaseModel):
     retrieval_dense_pool_k: int = int(os.getenv("RETRIEVAL_DENSE_POOL_K", "36"))
     rerank_timeout_seconds: int = int(os.getenv("RERANK_TIMEOUT_SECONDS", "8"))
     rerank_max_retries: int = int(os.getenv("RERANK_MAX_RETRIES", "0"))
+    react_max_steps: int = int(os.getenv("REACT_MAX_STEPS", "3"))
     postgres_dsn: str | None = os.getenv("POSTGRES_DSN", "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/contract_agent")
     max_upload_size_bytes: int = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", str(5 * 1024 * 1024)))
     max_redraft_chunk_chars: int = int(os.getenv("MAX_REDRAFT_CHUNK_CHARS", "12000"))

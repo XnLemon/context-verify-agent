@@ -29,6 +29,13 @@ class ChatSearchResult(BaseModel):
     source_path: str | None = None
 
 
+class ChatTraceStep(BaseModel):
+    step: int
+    thought: str
+    action: str
+    observation: str
+
+
 class ChatResponse(BaseModel):
     intent: ChatIntent
     tool_used: str
@@ -36,3 +43,4 @@ class ChatResponse(BaseModel):
     generated_at: datetime
     search_results: list[ChatSearchResult] = Field(default_factory=list)
     review_result: ReviewResponse | None = None
+    trace_summary: list[ChatTraceStep] = Field(default_factory=list)

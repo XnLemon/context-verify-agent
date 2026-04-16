@@ -100,6 +100,62 @@ advice_answer_prompt = ChatPromptTemplate.from_template(
 """
 )
 
+
+react_step_prompt = ChatPromptTemplate.from_template(
+    """
+你是合同校审智能体的规划器。你必须在每一步只做一个决策：继续调用工具，或结束并给最终答案。
+
+可用动作:
+- query_knowledge: 当问题需要外部知识、法条依据、案例支持时使用
+- finish: 当信息已足够回答时使用
+
+当前意图:
+{intent}
+
+用户当前问题:
+{user_message}
+
+对话历史:
+{conversation}
+
+当前已知观察:
+{latest_observation}
+
+历史轨迹摘要:
+{trace_history}
+
+请只输出一行 JSON，不要输出 Markdown：
+{{"thought_summary":"一句话摘要，不超过40字","action":"query_knowledge|finish","action_input":{{"query":"查询词"}},"final_answer":"当 action=finish 时可给最终答案草稿"}}
+"""
+)
+
+
+react_synthesis_prompt = ChatPromptTemplate.from_template(
+    """
+你是合同校审助手。请基于用户问题、对话上下文和 ReAct 轨迹，给出最终中文答复。
+
+要求:
+- 答案专业、简洁、可执行
+- 不要暴露完整思维链，只输出结论
+- 若有外部依据，优先总结结论，再给 1-3 条来源提示
+
+当前意图:
+{intent}
+
+用户当前问题:
+{user_message}
+
+对话历史:
+{conversation}
+
+ReAct 轨迹摘要:
+{trace_history}
+
+检索上下文:
+{retrieved_context}
+"""
+)
+
 contract_redraft_prompt = ChatPromptTemplate.from_template(
     """
 你是资深合同律师，请基于“已采纳的问题建议”直接输出一版修订后的完整合同正文。

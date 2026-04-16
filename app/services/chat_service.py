@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import re
@@ -8,11 +8,26 @@ from typing import Any, Iterator
 
 from app.core.config import settings
 from app.llm.client import get_chat_model
-from app.llm.prompts import advice_answer_prompt, chat_answer_prompt, chat_intent_prompt, search_answer_prompt
+from app.llm.prompts import (
+    advice_answer_prompt,
+    chat_answer_prompt,
+    chat_intent_prompt,
+    react_step_prompt,
+    react_synthesis_prompt,
+    search_answer_prompt,
+)
 from app.rag.retriever import ContractKnowledgeRetriever
 from app.rag.vector_store import load_vector_store
 from app.schemas.chat import ChatRequest, ChatResponse, ChatSearchResult
 from app.schemas.review import ReviewRequest
+from app.services.react_runtime import (
+    ActionContext,
+    ActionReference,
+    ActionRegistry,
+    QueryKnowledgeAction,
+    ReactTraceStep,
+    references_to_search_results,
+)
 from app.services.review_service import ReviewService
 
 
@@ -24,6 +39,8 @@ class ChatService:
         self.review_service = ReviewService()
         self.llm = None
         self._knowledge_retriever = None
+        self._action_registry = ActionRegistry()
+        self._action_registry.register(QueryKnowledgeAction(self._require_knowledge_retriever))
 
     def chat(self, payload: ChatRequest) -> ChatResponse:
         final_payload: dict[str, Any] | None = None
@@ -47,20 +64,7 @@ class ChatService:
             yield {"event": "done", "data": response.model_dump(mode="json")}
             return
 
-        if intent == "search":
-            response = self._handle_search_stream(payload, query)
-            for event in response:
-                yield event
-            return
-
-        if intent == "advice":
-            response = self._handle_advice_stream(payload, query)
-            for event in response:
-                yield event
-            return
-
-        response = self._handle_chat_stream(payload)
-        for event in response:
+        for event in self._handle_react_stream(payload, intent=intent, query=query):
             yield event
 
     def _handle_review(self, payload: ChatRequest, query: str) -> ChatResponse:
@@ -93,42 +97,96 @@ class ChatService:
             review_result=review_result,
         )
 
-    def _handle_search(self, payload: ChatRequest, query: str) -> ChatResponse:
-        retriever = self._require_knowledge_retriever()
+    def _handle_react_stream(self, payload: ChatRequest, intent: str, query: str) -> Iterator[dict[str, Any]]:
         llm = self._require_llm()
-        docs = retriever.retrieve_documents(query=query, k=3)
-        contexts = [doc.page_content for doc in docs]
-        answer = (search_answer_prompt | llm).invoke(
-            {
-                "user_message": self._latest_user_message(payload),
-                "retrieved_context": "\n\n".join(contexts) if contexts else "未检索到相关内容",
-            }
-        ).content
-        return ChatResponse(
-            intent="search",
-            tool_used="knowledge_search",
-            answer=answer,
-            generated_at=datetime.now(timezone.utc),
-            search_results=self._to_search_results(docs),
+        max_steps = max(1, settings.react_max_steps)
+        action_context = ActionContext(
+            user_message=self._latest_user_message(payload),
+            intent=intent,
+            conversation=self._conversation_text(payload),
         )
 
-    def _handle_search_stream(self, payload: ChatRequest, query: str) -> Iterator[dict[str, Any]]:
-        retriever = self._require_knowledge_retriever()
-        llm = self._require_llm()
-        docs = retriever.retrieve_documents(query=query, k=3)
-        contexts = [doc.page_content for doc in docs]
-        yield {"event": "start", "data": {"intent": "search", "tool_used": "knowledge_search"}}
+        trace_steps: list[ReactTraceStep] = []
+        collected_references: list[ActionReference] = []
+        latest_observation = "暂无观察"
+        final_answer = ""
+        used_action = False
+
+        yield {
+            "event": "start",
+            "data": {
+                "intent": intent,
+                "tool_used": "react",
+                "actions": self._action_registry.manifest(),
+            },
+        }
+
+        for step in range(1, max_steps + 1):
+            plan = self._plan_react_step(
+                llm=llm,
+                payload=payload,
+                intent=intent,
+                query=query,
+                latest_observation=latest_observation,
+                trace_steps=trace_steps,
+            )
+
+            thought = str(plan.get("thought_summary") or "").strip() or f"继续分析第 {step} 步。"
+            action = str(plan.get("action") or "").strip() or "finish"
+            action_input = plan.get("action_input") if isinstance(plan.get("action_input"), dict) else {}
+            if action == "query_knowledge" and not action_input.get("query"):
+                action_input = {"query": query}
+            final_answer_candidate = str(plan.get("final_answer") or "").strip()
+
+            yield {"event": "reasoning", "data": {"step": step, "summary": thought}}
+
+            if action == "finish":
+                observation = "规划器判断信息已充分，进入最终回答。"
+                trace_steps.append(ReactTraceStep(step=step, thought=thought, action="finish", observation=observation))
+                final_answer = final_answer_candidate
+                break
+
+            yield {
+                "event": "action",
+                "data": {
+                    "step": step,
+                    "name": action,
+                    "input_preview": action_input,
+                },
+            }
+            used_action = True
+
+            result = self._action_registry.execute(action, action_context, action_input)
+            collected_references.extend(result.references)
+            latest_observation = result.summary
+            trace_steps.append(ReactTraceStep(step=step, thought=thought, action=action, observation=result.summary))
+            yield {
+                "event": "observation",
+                "data": {
+                    "step": step,
+                    "action": action,
+                    "success": result.success,
+                    "summary": result.summary,
+                    "refs": [item.model_dump(mode="json") for item in references_to_search_results(result.references)],
+                    "error_code": result.error_code,
+                    "retryable": result.retryable,
+                    "failure_type": result.metadata.get("failure_type"),
+                },
+            }
+
+        if not final_answer:
+            final_answer = self._synthesize_react_answer(
+                llm=llm,
+                payload=payload,
+                intent=intent,
+                trace_steps=trace_steps,
+                references=collected_references,
+            )
 
         answer = ""
         stream_started_at = time.monotonic()
         hit_limit = False
-        for delta in self._stream_chain_response(
-            search_answer_prompt | llm,
-            {
-                "user_message": self._latest_user_message(payload),
-                "retrieved_context": "\n\n".join(contexts) if contexts else "未检索到相关内容",
-            },
-        ):
+        for delta in self._chunk_text(final_answer):
             if time.monotonic() - stream_started_at >= self.STREAM_MAX_SECONDS or len(answer) >= self.STREAM_MAX_CHARS:
                 hit_limit = True
                 break
@@ -136,85 +194,110 @@ class ChatService:
             yield {"event": "delta", "data": {"delta": delta}}
 
         if hit_limit:
-            tail = "\n\n（已先返回核心结论；如需展开细节，请继续追问具体条款）"
+            tail = "\n\n（已先返回核心结论；如需展开细节请继续追问。）"
             answer += tail
             yield {"event": "delta", "data": {"delta": tail}}
 
         response = ChatResponse(
+            intent=intent if intent in {"search", "advice", "chat"} else "chat",
+            tool_used="react_query_knowledge" if used_action else "react",
+            answer=answer,
+            generated_at=datetime.now(timezone.utc),
+            search_results=references_to_search_results(self._dedupe_references(collected_references)),
+            trace_summary=[step.to_summary_dict() for step in trace_steps],
+        )
+        yield {"event": "done", "data": response.model_dump(mode="json")}
+
+    def _plan_react_step(
+        self,
+        llm: Any,
+        payload: ChatRequest,
+        intent: str,
+        query: str,
+        latest_observation: str,
+        trace_steps: list[ReactTraceStep],
+    ) -> dict[str, Any]:
+        raw = self._invoke_chain_once(
+            react_step_prompt | llm,
+            {
+                "intent": intent,
+                "user_message": query,
+                "conversation": self._conversation_text(payload),
+                "latest_observation": latest_observation,
+                "trace_history": self._format_trace_history_for_prompt(trace_steps),
+            },
+        )
+        return self._parse_react_step_output(raw, default_query=query)
+
+    def _synthesize_react_answer(
+        self,
+        llm: Any,
+        payload: ChatRequest,
+        intent: str,
+        trace_steps: list[ReactTraceStep],
+        references: list[ActionReference],
+    ) -> str:
+        return self._invoke_chain_once(
+            react_synthesis_prompt | llm,
+            {
+                "intent": intent,
+                "user_message": self._latest_user_message(payload),
+                "conversation": self._conversation_text(payload),
+                "trace_history": self._format_trace_history_for_prompt(trace_steps),
+                "retrieved_context": self._format_retrieved_context(references),
+            },
+        )
+
+    def _handle_search(self, payload: ChatRequest, query: str) -> ChatResponse:
+        retriever = self._require_knowledge_retriever()
+        llm = self._require_llm()
+        docs = retriever.retrieve_documents(query=query, k=3)
+        contexts = [doc.page_content for doc in docs]
+        answer = self._invoke_chain_once(
+            search_answer_prompt | llm,
+            {
+                "user_message": self._latest_user_message(payload),
+                "retrieved_context": "\n\n".join(contexts) if contexts else "未检索到相关内容",
+            },
+        )
+        return ChatResponse(
             intent="search",
             tool_used="knowledge_search",
             answer=answer,
             generated_at=datetime.now(timezone.utc),
             search_results=self._to_search_results(docs),
         )
-        yield {"event": "done", "data": response.model_dump(mode="json")}
 
     def _handle_advice(self, payload: ChatRequest, query: str) -> ChatResponse:
         retriever = self._require_knowledge_retriever()
         llm = self._require_llm()
         docs = retriever.retrieve_documents(query=query, k=3)
         contexts = [doc.page_content for doc in docs]
-        answer = (advice_answer_prompt | llm).invoke(
-            {
-                "user_message": self._latest_user_message(payload),
-                "contract_text": payload.contract_text or "无合同上下文",
-                "retrieved_context": "\n\n".join(contexts) if contexts else "未检索到相关内容",
-            }
-        ).content
-        return ChatResponse(
-            intent="advice",
-            tool_used="advice",
-            answer=answer,
-            generated_at=datetime.now(timezone.utc),
-            search_results=self._to_search_results(docs),
-        )
-
-    def _handle_advice_stream(self, payload: ChatRequest, query: str) -> Iterator[dict[str, Any]]:
-        retriever = self._require_knowledge_retriever()
-        llm = self._require_llm()
-        docs = retriever.retrieve_documents(query=query, k=3)
-        contexts = [doc.page_content for doc in docs]
-        yield {"event": "start", "data": {"intent": "advice", "tool_used": "advice"}}
-
-        answer = ""
-        stream_started_at = time.monotonic()
-        hit_limit = False
-        for delta in self._stream_chain_response(
+        answer = self._invoke_chain_once(
             advice_answer_prompt | llm,
             {
                 "user_message": self._latest_user_message(payload),
                 "contract_text": payload.contract_text or "无合同上下文",
                 "retrieved_context": "\n\n".join(contexts) if contexts else "未检索到相关内容",
             },
-        ):
-            if time.monotonic() - stream_started_at >= self.STREAM_MAX_SECONDS or len(answer) >= self.STREAM_MAX_CHARS:
-                hit_limit = True
-                break
-            answer += delta
-            yield {"event": "delta", "data": {"delta": delta}}
-
-        if hit_limit:
-            tail = "\n\n（已先返回核心建议；如需某一条款的完整改写，请直接指出条款）"
-            answer += tail
-            yield {"event": "delta", "data": {"delta": tail}}
-
-        response = ChatResponse(
+        )
+        return ChatResponse(
             intent="advice",
             tool_used="advice",
             answer=answer,
             generated_at=datetime.now(timezone.utc),
             search_results=self._to_search_results(docs),
         )
-        yield {"event": "done", "data": response.model_dump(mode="json")}
 
     def _handle_chat(self, payload: ChatRequest) -> ChatResponse:
         llm = self._require_llm()
-        answer = (chat_answer_prompt | llm).invoke(
+        answer = self._invoke_chain_once(
+            chat_answer_prompt | llm,
             {
                 "conversation": self._conversation_text(payload),
                 "user_message": self._latest_user_message(payload),
-            }
-        ).content
+            },
+        )
         return ChatResponse(
             intent="chat",
             tool_used="chat",
@@ -222,50 +305,18 @@ class ChatService:
             generated_at=datetime.now(timezone.utc),
         )
 
-    def _handle_chat_stream(self, payload: ChatRequest) -> Iterator[dict[str, Any]]:
+    def _route_intent(self, payload: ChatRequest) -> dict[str, Any]:
         llm = self._require_llm()
-        yield {"event": "start", "data": {"intent": "chat", "tool_used": "chat"}}
-
-        answer = ""
-        stream_started_at = time.monotonic()
-        hit_limit = False
-        for delta in self._stream_chain_response(
-            chat_answer_prompt | llm,
-            {
-                "conversation": self._conversation_text(payload),
-                "user_message": self._latest_user_message(payload),
-            },
-        ):
-            if time.monotonic() - stream_started_at >= self.STREAM_MAX_SECONDS or len(answer) >= self.STREAM_MAX_CHARS:
-                hit_limit = True
-                break
-            answer += delta
-            yield {"event": "delta", "data": {"delta": delta}}
-
-        if hit_limit:
-            tail = "\n\n（为保证时效，已先返回核心内容；你可以继续追问某个点）"
-            answer += tail
-            yield {"event": "delta", "data": {"delta": tail}}
-
-        response = ChatResponse(
-            intent="chat",
-            tool_used="chat",
-            answer=answer,
-            generated_at=datetime.now(timezone.utc),
-        )
-        yield {"event": "done", "data": response.model_dump(mode="json")}
-
-    def _route_intent(self, payload: ChatRequest) -> dict:
-        llm = self._require_llm()
-        raw = (chat_intent_prompt | llm).invoke(
+        raw = self._invoke_chain_once(
+            chat_intent_prompt | llm,
             {
                 "contract_text": payload.contract_text or "无合同上下文",
                 "conversation": self._conversation_text(payload),
-            }
-        ).content
+            },
+        )
         return self._parse_router_output(raw, payload)
 
-    def _parse_router_output(self, raw: str, payload: ChatRequest) -> dict:
+    def _parse_router_output(self, raw: str, payload: ChatRequest) -> dict[str, Any]:
         match = re.search(r"\{.*\}", raw, re.S)
         latest = self._latest_user_message(payload)
         if match:
@@ -290,6 +341,61 @@ class ChatService:
         if any(keyword in latest for keyword in ("建议", "怎么改", "如何写", "怎么写", "风险", "解释", "说明")):
             return {"intent": "advice", "query": latest, "reason": "fallback-advice"}
         return {"intent": "chat", "query": latest, "reason": "fallback-chat"}
+
+    def _parse_react_step_output(self, raw: str, default_query: str) -> dict[str, Any]:
+        match = re.search(r"\{.*\}", raw, re.S)
+        if not match:
+            return {"thought_summary": "无法解析规划输出，直接给出结论。", "action": "finish", "final_answer": ""}
+        try:
+            data = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return {"thought_summary": "规划输出非 JSON，直接给出结论。", "action": "finish", "final_answer": ""}
+
+        action = str(data.get("action") or "").strip()
+        if action not in {"query_knowledge", "finish"}:
+            action = "finish"
+        action_input = data.get("action_input")
+        if not isinstance(action_input, dict):
+            action_input = {}
+        if action == "query_knowledge" and not action_input.get("query"):
+            action_input = {"query": default_query}
+
+        return {
+            "thought_summary": str(data.get("thought_summary") or "").strip(),
+            "action": action,
+            "action_input": action_input,
+            "final_answer": str(data.get("final_answer") or "").strip(),
+        }
+
+    def _format_trace_history_for_prompt(self, trace_steps: list[ReactTraceStep]) -> str:
+        if not trace_steps:
+            return "暂无轨迹。"
+        return "\n".join(
+            f"Step {item.step}: thought={item.thought}; action={item.action}; observation={item.observation}"
+            for item in trace_steps
+        )
+
+    def _format_retrieved_context(self, references: list[ActionReference]) -> str:
+        if not references:
+            return "未检索到相关内容"
+        rows = []
+        for index, ref in enumerate(references[:6], start=1):
+            rows.append(
+                f"[{index}] {ref.source_title}"
+                + (f" ({ref.article_label})" if ref.article_label else "")
+                + f"\n{ref.snippet}"
+            )
+        return "\n\n".join(rows)
+
+    def _invoke_chain_once(self, chain: Any, chain_input: dict[str, Any]) -> str:
+        output = chain.invoke(chain_input)
+        return self._chunk_to_text(output)
+
+    def _stream_chain_response(self, chain: Any, chain_input: dict[str, Any]) -> Iterator[str]:
+        for chunk in chain.stream(chain_input):
+            content = self._chunk_to_text(chunk)
+            if content:
+                yield content
 
     def _require_llm(self):
         if not settings.qwen_api_key:
@@ -327,16 +433,27 @@ class ChatService:
             return latest
         return None
 
-    def _to_search_results(self, docs) -> list[ChatSearchResult]:
+    def _to_search_results(self, docs: list[Any]) -> list[ChatSearchResult]:
         return [
             ChatSearchResult(
                 source_title=doc.metadata.get("title") or doc.metadata.get("doc_name") or "未命名知识片段",
                 article_label=doc.metadata.get("article_label"),
-                snippet=doc.page_content[:240],
+                snippet=(doc.page_content or "")[:240],
                 source_path=doc.metadata.get("source_path"),
             )
             for doc in docs
         ]
+
+    def _dedupe_references(self, references: list[ActionReference]) -> list[ActionReference]:
+        deduped: list[ActionReference] = []
+        seen: set[tuple[str, str, str | None]] = set()
+        for ref in references:
+            key = (ref.source_title, ref.snippet, ref.source_path)
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(ref)
+        return deduped
 
     def _is_explicit_review_request(self, text: str) -> bool:
         return any(
@@ -352,12 +469,6 @@ class ChatService:
                 "跑一遍审查",
             )
         )
-
-    def _stream_chain_response(self, chain, chain_input: dict[str, Any]) -> Iterator[str]:
-        for chunk in chain.stream(chain_input):
-            content = self._chunk_to_text(chunk)
-            if content:
-                yield content
 
     def _chunk_to_text(self, chunk: Any) -> str:
         if chunk is None:

@@ -234,12 +234,34 @@ type ChatStreamErrorEvent = {
   error: string;
 };
 
+type ChatStreamReasoningEvent = {
+  step: number;
+  summary: string;
+};
+
+type ChatStreamActionEvent = {
+  step: number;
+  name: string;
+  input_preview?: string;
+};
+
+type ChatStreamObservationEvent = {
+  step: number;
+  action: string;
+  success: boolean;
+  summary: string;
+  refs?: string[];
+};
+
 export async function sendWorkbenchChatMessageStream(
   contractId: string,
   message: string,
   handlers?: {
     onStart?: (event: ChatStreamStartEvent) => void;
     onDelta?: (event: ChatStreamDeltaEvent) => void;
+    onReasoning?: (event: ChatStreamReasoningEvent) => void;
+    onAction?: (event: ChatStreamActionEvent) => void;
+    onObservation?: (event: ChatStreamObservationEvent) => void;
   },
 ) {
   const token = getAuthToken();
@@ -323,6 +345,21 @@ export async function sendWorkbenchChatMessageStream(
 
     if (event === 'done') {
       finalPayload = JSON.parse(raw) as ChatResponse;
+      return;
+    }
+
+    if (event === 'reasoning') {
+      handlers?.onReasoning?.(JSON.parse(raw) as ChatStreamReasoningEvent);
+      return;
+    }
+
+    if (event === 'action') {
+      handlers?.onAction?.(JSON.parse(raw) as ChatStreamActionEvent);
+      return;
+    }
+
+    if (event === 'observation') {
+      handlers?.onObservation?.(JSON.parse(raw) as ChatStreamObservationEvent);
       return;
     }
 

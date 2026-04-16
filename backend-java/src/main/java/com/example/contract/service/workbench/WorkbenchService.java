@@ -176,6 +176,9 @@ public class WorkbenchService {
                 eventConsumer.accept(event);
                 return;
             }
+            if (!eventName.isBlank()) {
+                eventConsumer.accept(event);
+            }
         }
 
         if (donePayload == null) {
@@ -184,6 +187,9 @@ public class WorkbenchService {
             donePayload.put("tool_used", "chat_stream_fallback");
             donePayload.put("answer", streamedAnswer.toString());
             donePayload.put("review_result", null);
+        } else if (asString(donePayload.get("answer")).isBlank() && streamedAnswer.length() > 0) {
+            donePayload = new LinkedHashMap<>(donePayload);
+            donePayload.put("answer", streamedAnswer.toString());
         }
 
         Map<String, Object> finalPayload = finalizeChat(contractId, chatContext, donePayload, currentMember, streamAssistant);
@@ -279,6 +285,10 @@ public class WorkbenchService {
         out.put("assistantMessage", assistant);
         out.put("messages", chatContext.messages());
         out.put("latestReview", latestReview);
+        Object traceSummary = chat.containsKey("traceSummary") ? chat.get("traceSummary") : chat.get("trace_summary");
+        if (traceSummary != null) {
+            out.put("traceSummary", traceSummary);
+        }
         return out;
     }
 

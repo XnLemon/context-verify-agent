@@ -33,12 +33,21 @@ import type {
   AuditIssue,
   AuditIssueStatus,
   ChatMessage,
+  ChatTraceSummaryItem,
   Contract,
   ContractStatus,
   HistoryItem,
   ReviewResult,
   UserMember,
 } from '@/src/types';
+
+type ReActTraceStep = {
+  step: number;
+  thought?: string;
+  action?: string;
+  observation?: string;
+  success?: boolean;
+};
 
 export default function Review({
   currentUser,
@@ -66,6 +75,7 @@ export default function Review({
   const [draftContent, setDraftContent] = useState('');
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [reactTrace, setReactTrace] = useState<ReActTraceStep[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const canEditContract = canUploadOrEditContract(currentUser);
   const canFinalize = canFinalizeContract(currentUser);
@@ -204,6 +214,21 @@ export default function Review({
     setInputMessage('');
     setIsSending(true);
     setError(null);
+    setReactTrace([]);
+
+    const upsertTrace = (
+      step: number,
+      patch: Partial<ReActTraceStep>,
+    ) => {
+      setReactTrace((prev) => {
+        const index = prev.findIndex((item) => item.step === step);
+        if (index === -1) {
+          return [...prev, { step, ...patch }].sort((a, b) => a.step - b.step);
+        }
+        return prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item));
+      });
+    };
+
     try {
       const response = await sendWorkbenchChatMessageStream(contractId, outgoing, {
         onStart: ({ id, timestamp }) => {
@@ -232,9 +257,30 @@ export default function Review({
             ),
           );
         },
+        onReasoning: ({ step, summary }) => {
+          upsertTrace(step, { thought: summary });
+        },
+        onAction: ({ step, name, input_preview }) => {
+          const actionPreview = input_preview ? `${name}: ${input_preview}` : name;
+          upsertTrace(step, { action: actionPreview });
+        },
+        onObservation: ({ step, summary, success }) => {
+          upsertTrace(step, { observation: summary, success });
+        },
       });
 
       setChatMessages(response.messages);
+      if (Array.isArray(response.traceSummary) && response.traceSummary.length > 0) {
+        const normalized = response.traceSummary
+          .map((item: ChatTraceSummaryItem) => ({
+            step: item.step,
+            thought: item.thought,
+            action: item.action,
+            observation: item.observation,
+          }))
+          .sort((a, b) => a.step - b.step);
+        setReactTrace(normalized);
+      }
       if (response.latestReview) {
         setLatestReview(response.latestReview);
       }
@@ -563,6 +609,25 @@ export default function Review({
             {activeTab === 'chat' && (
               <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
                 <div className="flex-1 overflow-auto p-6 space-y-6">
+                  {reactTrace.length > 0 && (
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                      <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">推理摘要轨迹</h4>
+                      <div className="space-y-2">
+                        {reactTrace.map((stepItem) => (
+                          <div key={stepItem.step} className="rounded-lg border border-blue-100 bg-white p-3 text-xs text-slate-600">
+                            <div className="font-bold text-slate-800 mb-1">Step {stepItem.step}</div>
+                            {stepItem.thought && <div>Thought: {stepItem.thought}</div>}
+                            {stepItem.action && <div>Action: {stepItem.action}</div>}
+                            {stepItem.observation && (
+                              <div className={cn(stepItem.success === false ? 'text-amber-700' : 'text-slate-600')}>
+                                Observation: {stepItem.observation}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {chatMessages.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
                       还没有对话记录，可以直接向 AI 追问合同风险、法条依据或修改建议。
