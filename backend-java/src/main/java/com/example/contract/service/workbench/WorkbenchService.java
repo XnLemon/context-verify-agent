@@ -15,6 +15,7 @@ import java.util.*;
 
 @Service
 public class WorkbenchService {
+    private static final Set<String> VALID_ISSUE_STATUSES = Set.of("pending", "accepted", "rejected");
     private final WorkbenchRepository repository;
     private final AgentGateway agentGateway;
     private final AppProperties props;
@@ -163,7 +164,18 @@ public class WorkbenchService {
         Object reviewObj = chat.get("review_result");
         Object latestReview = null;
         if (reviewObj instanceof Map<?, ?> reviewResult) {
-            Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, null);
+            Map<String, String> previousStatuses = repository.getReview(contractId)
+                    .map(r -> (List<Map<String, Object>>) r.get("issues"))
+                    .orElse(List.of())
+                    .stream()
+                    .filter(i -> i.get("id") != null)
+                    .collect(java.util.stream.Collectors.toMap(
+                            i -> String.valueOf(i.get("id")),
+                            i -> asString(i.get("status")),
+                            (a, b) -> a,
+                            LinkedHashMap::new
+                    ));
+            Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, previousStatuses);
             saveStoredReview(stored);
             contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
             contract.put("updated_at", OffsetDateTime.now());
@@ -185,6 +197,10 @@ public class WorkbenchService {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         Map<String, Object> review = repository.getReview(contractId).orElseThrow(() -> new ApiException(404, "Contract review not found: " + contractId));
         String status = asString(payload.get("status"));
+        if (!VALID_ISSUE_STATUSES.contains(status)) {
+            throw new ApiException(400, "Issue status must be one of pending, accepted, rejected.");
+        }
+        boolean autoRedraft = parseBoolean(payload.get("auto_redraft"));
         boolean found = false;
         List<Map<String, Object>> issues = (List<Map<String, Object>>) review.get("issues");
         for (Map<String, Object> issue : issues) {
@@ -201,7 +217,36 @@ public class WorkbenchService {
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
         appendHistory(contractId, currentMember, "issue_decision", "更新风险处理状态", "问题 " + issueId + " 已标记为 " + status + "。", Map.of("issue_id", issueId, "status", status));
-        return toReviewResult(repository.getReview(contractId).orElseThrow());
+        boolean autoRedraftAttempted = false;
+        boolean autoRedraftSucceeded = false;
+        String autoRedraftError = null;
+        if ("accepted".equals(status) && autoRedraft) {
+            autoRedraftAttempted = true;
+            String ourSide = asString(payload.get("our_side"));
+            if (ourSide.isBlank()) {
+                ourSide = "甲方";
+            }
+            try {
+                redraftContract(contractId, ourSide, currentMember);
+                autoRedraftSucceeded = true;
+            } catch (Exception e) {
+                autoRedraftError = e.getClass().getSimpleName();
+                appendHistory(contractId, currentMember, "redraft_failed", "Auto redraft failed",
+                        "Auto redraft failed but issue decision was saved.",
+                        Map.of("issue_id", issueId, "error", autoRedraftError));
+            }
+        }
+        Map<String, Object> response = new LinkedHashMap<>(toReviewResult(repository.getReview(contractId).orElseThrow()));
+        if (autoRedraftAttempted) {
+            Map<String, Object> autoRedraftResult = new LinkedHashMap<>();
+            autoRedraftResult.put("attempted", true);
+            autoRedraftResult.put("succeeded", autoRedraftSucceeded);
+            if (!autoRedraftSucceeded) {
+                autoRedraftResult.put("error", autoRedraftError == null ? "UnknownError" : autoRedraftError);
+            }
+            response.put("autoRedraft", autoRedraftResult);
+        }
+        return response;
     }
 
     public Map<String, Object> redraftContract(String contractId, String ourSide, Member currentMember) {
@@ -358,7 +403,16 @@ public class WorkbenchService {
     }
 
     private String deriveStatus(List<Map<String, Object>> issues) {
-        return issues.stream().anyMatch(i -> "pending".equals(i.get("status"))) ? "reviewing" : "approved";
+        if (issues == null || issues.isEmpty()) {
+            return "approved";
+        }
+        for (Map<String, Object> issue : issues) {
+            String issueStatus = asString(issue.get("status"));
+            if (!VALID_ISSUE_STATUSES.contains(issueStatus) || "pending".equals(issueStatus)) {
+                return "reviewing";
+            }
+        }
+        return "approved";
     }
 
     private Map<String, Object> chatMessage(String role, String content) {
@@ -379,5 +433,12 @@ public class WorkbenchService {
 
     private String asString(Object value) {
         return value == null ? "" : value.toString();
+    }
+
+    private boolean parseBoolean(Object value) {
+        if (value instanceof Boolean b) {
+            return b;
+        }
+        return value != null && Boolean.parseBoolean(value.toString());
     }
 }

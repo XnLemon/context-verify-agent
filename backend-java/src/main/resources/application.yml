@@ -28,6 +28,8 @@ app:
   max-upload-size-bytes: ${MAX_UPLOAD_SIZE_BYTES:5242880}
   max-avatar-upload-size-bytes: ${MAX_AVATAR_UPLOAD_SIZE_BYTES:2097152}
   auth-session-ttl-hours: ${AUTH_SESSION_TTL_HOURS:72}
+  auth-challenge-ttl-seconds: ${AUTH_CHALLENGE_TTL_SECONDS:90}
+  auth-max-challenges: ${AUTH_MAX_CHALLENGES:1000}
   bootstrap-admin-username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
   bootstrap-admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:admin123}
   bootstrap-admin-display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:系统管理员}

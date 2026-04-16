@@ -10,6 +10,8 @@ public class AppProperties {
     private long maxUploadSizeBytes = 5 * 1024 * 1024;
     private long maxAvatarUploadSizeBytes = 2 * 1024 * 1024;
     private int authSessionTtlHours = 72;
+    private int authChallengeTtlSeconds = 90;
+    private int authMaxChallenges = 1000;
     private String bootstrapAdminUsername = "admin";
     private String bootstrapAdminPassword = "admin123";
     private String bootstrapAdminDisplayName = "系统管理员";
@@ -42,6 +44,10 @@ public class AppProperties {
     public void setMaxAvatarUploadSizeBytes(long maxAvatarUploadSizeBytes) { this.maxAvatarUploadSizeBytes = maxAvatarUploadSizeBytes; }
     public int getAuthSessionTtlHours() { return authSessionTtlHours; }
     public void setAuthSessionTtlHours(int authSessionTtlHours) { this.authSessionTtlHours = authSessionTtlHours; }
+    public int getAuthChallengeTtlSeconds() { return authChallengeTtlSeconds; }
+    public void setAuthChallengeTtlSeconds(int authChallengeTtlSeconds) { this.authChallengeTtlSeconds = authChallengeTtlSeconds; }
+    public int getAuthMaxChallenges() { return authMaxChallenges; }
+    public void setAuthMaxChallenges(int authMaxChallenges) { this.authMaxChallenges = authMaxChallenges; }
     public String getBootstrapAdminUsername() { return bootstrapAdminUsername; }
     public void setBootstrapAdminUsername(String bootstrapAdminUsername) { this.bootstrapAdminUsername = bootstrapAdminUsername; }
     public String getBootstrapAdminPassword() { return bootstrapAdminPassword; }
