@@ -23,25 +23,26 @@
 import { getAuthToken } from '@/src/lib/auth';
 
 const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-export const API_BASE_URL = viteEnv?.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+export const API_BASE_URL = viteEnv?.VITE_API_BASE_URL ?? 'http://127.0.0.1:8080';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData;
   const token = getAuthToken();
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const mergedHeaders = isFormData
+    ? {
+        ...authHeader,
+        ...(init?.headers ?? {}),
+      }
+    : {
+        'Content-Type': 'application/json',
+        ...authHeader,
+        ...(init?.headers ?? {}),
+      };
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: isFormData
-      ? {
-          ...authHeader,
-          ...(init?.headers ?? {}),
-        }
-      : {
-          'Content-Type': 'application/json',
-          ...authHeader,
-          ...(init?.headers ?? {}),
-        },
     ...init,
+    headers: mergedHeaders,
   });
 
   if (!response.ok) {
@@ -268,7 +269,5 @@ export function importWorkbenchContract(
     headers: {},
   });
 }
-
-
 
 

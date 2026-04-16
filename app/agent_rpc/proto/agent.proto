@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package contract.agent.v1;
+
+option java_multiple_files = true;
+option java_package = "com.example.contract.agent.v1";
+option java_outer_classname = "AgentProto";
+
+service AgentRpcService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc ParseFile(ParseFileRequest) returns (JsonResponse);
+  rpc Review(ReviewRequest) returns (JsonResponse);
+  rpc Chat(ChatRequest) returns (JsonResponse);
+  rpc Redraft(RedraftRequest) returns (JsonResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;
+  bool llm_configured = 2;
+  bool knowledge_base_ready = 3;
+  string version = 4;
+  repeated string capabilities = 5;
+}
+
+message ParseFileRequest {
+  string file_name = 1;
+  bytes content = 2;
+}
+
+message ReviewRequest {
+  oneof input {
+    string contract_text = 1;
+    FilePayload file = 2;
+  }
+  string contract_type = 3;
+  string our_side = 4;
+}
+
+message ChatRequest {
+  string payload_json = 1;
+}
+
+message RedraftRequest {
+  string contract_text = 1;
+  string contract_type = 2;
+  string our_side = 3;
+  string accepted_issues_json = 4;
+}
+
+message FilePayload {
+  string file_name = 1;
+  bytes content = 2;
+}
+
+message JsonResponse {
+  int32 code = 1;
+  string json = 2;
+  string error = 3;
+}

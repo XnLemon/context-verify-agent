@@ -1,0 +1,40 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: contract-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/contract_agent}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_SIZE:5MB}
+      max-request-size: ${MAX_UPLOAD_SIZE:5MB}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  default-contract-type: ${DEFAULT_CONTRACT_TYPE:采购合同}
+  max-upload-size-bytes: ${MAX_UPLOAD_SIZE_BYTES:5242880}
+  max-avatar-upload-size-bytes: ${MAX_AVATAR_UPLOAD_SIZE_BYTES:2097152}
+  auth-session-ttl-hours: ${AUTH_SESSION_TTL_HOURS:72}
+  auth-challenge-ttl-seconds: ${AUTH_CHALLENGE_TTL_SECONDS:90}
+  auth-max-challenges: ${AUTH_MAX_CHALLENGES:1000}
+  bootstrap-admin-username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+  bootstrap-admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:admin123}
+  bootstrap-admin-display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:系统管理员}
+  agent:
+    rpc:
+      provider: ${AGENT_RPC_PROVIDER:grpc}
+      grpc-target: ${AGENT_GRPC_TARGET:127.0.0.1:50051}
+      timeout-millis: ${AGENT_RPC_TIMEOUT_MILLIS:15000}

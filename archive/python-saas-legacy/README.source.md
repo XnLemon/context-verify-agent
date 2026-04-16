@@ -3,9 +3,7 @@
 当前架构：
 
 - `backend-java/`: SpringBoot SaaS 业务后端（鉴权、工作台、审批、历史）
-- `app/`: Python Agent 代码（仅保留 parse/review/chat/redraft 与 RAG/LLM）
-- `app/agent_rpc/server.py`: Python Agent RPC 服务入口
-- `archive/python-saas-legacy/`: 原 FastAPI SaaS 代码归档（不参与运行）
+- `app/agent_rpc/server.py`: Python Agent RPC 服务（parse/review/chat/redraft）
 - `frontend/`: React 前端
 
 目标是保持业务功能与接口契约不变，将业务后端从 FastAPI 迁到 SpringBoot，并通过可替换 RPC 访问 Agent。
@@ -31,15 +29,13 @@
 
 ```text
 app/
-  agent_rpc/           # gRPC 服务入口与 proto
+  api/                 # 路由层
   core/                # 全局配置
-  db/                  # Agent 相关数据库模型与连接（知识块元数据）
+  db/                  # 数据库模型与连接
   llm/                 # 大模型客户端与提示词
   rag/                 # 检索与知识库构建
-  services/            # Agent 服务（校审、对话）
+  services/            # 业务服务（校审、工作台、鉴权等）
   schemas/             # Pydantic 请求/响应模型
-archive/python-saas-legacy/
-  app/                 # 旧 FastAPI SaaS 后端归档
 frontend/              # React 前端
 knowledge/             # 法规与知识数据
 docs/                  # 设计与持久化文档
@@ -124,15 +120,15 @@ npm run dev
 
 可选环境变量：
 
-- `VITE_API_BASE_URL`（默认 `http://127.0.0.1:8080`）
+- `VITE_API_BASE_URL`（默认 `http://127.0.0.1:8000`）
 
 ## 5. 默认账户
 
-系统默认可使用管理员账号联调：
+系统默认会引导初始化管理员（可通过环境变量覆盖）：
 
 - 用户名：`admin`
 - 密码：`admin123`
-- 账号初始化由 SpringBoot/Flyway 侧负责
+- 对应变量：`BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD`
 
 ## 6. 主要 API
 
@@ -177,7 +173,7 @@ npm run dev
 
 ## 7. 开发与验证
 
-Python Agent 测试：
+后端测试：
 
 ```powershell
 python -m unittest discover -s tests -v

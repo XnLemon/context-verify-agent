@@ -1,6 +1,43 @@
 ﻿version: "3.8"
 
 services:
+  spring-backend:
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+    container_name: contract-backend-java
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/contract_agent
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      AGENT_RPC_PROVIDER: ${AGENT_RPC_PROVIDER:-grpc}
+      AGENT_GRPC_TARGET: agent-python:50051
+      AGENT_RPC_TIMEOUT_MILLIS: ${AGENT_RPC_TIMEOUT_MILLIS:-15000}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - agent-python
+
+  agent-python:
+    build:
+      context: .
+      dockerfile: app/agent_rpc/Dockerfile
+    container_name: contract-agent-python
+    environment:
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      QWEN_CHAT_MODEL: ${QWEN_CHAT_MODEL:-qwen-max}
+      QWEN_EMBEDDING_MODEL: ${QWEN_EMBEDDING_MODEL:-text-embedding-v4}
+      VECTOR_BACKEND: ${VECTOR_BACKEND:-milvus}
+      MILVUS_URI: http://milvus:19530
+      POSTGRES_DSN: postgresql+psycopg://postgres:postgres@postgres:5432/contract_agent
+    ports:
+      - "50051:50051"
+    depends_on:
+      - postgres
+      - milvus
+
   postgres:
     image: postgres:16
     container_name: contract-agent-postgres
