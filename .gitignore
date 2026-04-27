@@ -49,6 +49,7 @@ desktop.ini
 .agents/
 .run/
 AGENTS.md
+CLAUDE.md
 frontend.md
 memory.md
 skills-lock.json
