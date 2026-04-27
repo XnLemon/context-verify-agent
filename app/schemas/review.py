@@ -1,7 +1,7 @@
 ﻿from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 Severity = Literal["high", "medium", "low", "info"]
@@ -50,6 +50,12 @@ class RiskItem(BaseModel):
     start_offset: int | None = None
     end_offset: int | None = None
     chunk_level: str | None = None
+
+    @model_validator(mode="after")
+    def validate_offsets(self):
+        if self.start_offset is not None and self.end_offset is not None and self.start_offset > self.end_offset:
+            raise ValueError(f"start_offset ({self.start_offset}) must not exceed end_offset ({self.end_offset})")
+        return self
 
 
 class ReviewSummary(BaseModel):
