@@ -1,12 +1,16 @@
 package com.example.contract.service.auth;
 
 import com.example.contract.config.AppProperties;
+import com.example.contract.dto.EmployeeListResponse;
+import com.example.contract.dto.LoginChallengeResponse;
+import com.example.contract.dto.LoginResponse;
+import com.example.contract.dto.MemberResponse;
 import com.example.contract.exception.ApiException;
 import com.example.contract.model.Member;
 import com.example.contract.repository.AuthRepository;
-import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -29,7 +33,7 @@ public class AuthService {
         bootstrapAdmin();
     }
 
-    public Map<String, Object> issueChallenge(String username) {
+    public LoginChallengeResponse issueChallenge(String username) {
         cleanupChallenges(OffsetDateTime.now());
         String normalized = trim(username);
         if (normalized.isEmpty()) {
@@ -53,15 +57,10 @@ public class AuthService {
         challenges.put(challengeToken, new LoginChallenge(normalized, nonce, passwordHash, memberId, now, expiresAt));
         cleanupChallenges(now);
 
-        return Map.of(
-                "challenge_token", challengeToken,
-                "nonce", nonce,
-                "salt", salt,
-                "expires_at", expiresAt
-        );
+        return new LoginChallengeResponse(challengeToken, nonce, salt, expiresAt.toString());
     }
 
-    public Map<String, Object> login(String username, String challengeToken, String passwordProof, String ipAddress, String userAgent) {
+    public LoginResponse login(String username, String challengeToken, String passwordProof, String ipAddress, String userAgent) {
         cleanupChallenges(OffsetDateTime.now());
         String normalized = trim(username);
         if (normalized.isEmpty() || trim(challengeToken).isEmpty() || trim(passwordProof).isEmpty()) {
@@ -88,11 +87,7 @@ public class AuthService {
         repository.createSession(member.id(), expiresAt, token);
         repository.insertLoginAudit(member.id(), ipAddress, userAgent);
 
-        return Map.of(
-                "token", token,
-                "expires_at", expiresAt,
-                "member", toMemberPublic(repository.toPublic(member))
-        );
+        return new LoginResponse(token, expiresAt.toString(), toMemberPublic(repository.toPublic(member)));
     }
 
     public void logout(String authorization) {
@@ -112,11 +107,12 @@ public class AuthService {
                 .orElseThrow(() -> new ApiException(401, "登录已失效，请重新登录"));
     }
 
-    public List<Map<String, Object>> listEmployees() {
-        return repository.listEmployees().stream().map(this::toMemberPublic).toList();
+    public EmployeeListResponse listEmployees() {
+        List<MemberResponse> items = repository.listEmployees().stream().map(this::toMemberPublic).toList();
+        return new EmployeeListResponse(items, items.size());
     }
 
-    public Map<String, Object> createEmployee(Map<String, Object> payload) {
+    public MemberResponse createEmployee(Map<String, Object> payload) {
         String username = trim((String) payload.get("username"));
         String displayName = trim((String) payload.get("display_name"));
         String password = trim((String) payload.get("password"));
@@ -124,6 +120,9 @@ public class AuthService {
 
         if (username.isEmpty() || displayName.isEmpty() || password.isEmpty()) {
             throw new ApiException(400, "用户名、昵称和密码不能为空");
+        }
+        if (!Set.of("legal", "finance", "admin").contains(memberType)) {
+            throw new ApiException(400, "无效的成员类型");
         }
         if (repository.findMemberRowByUsername(username).isPresent()) {
             throw new ApiException(400, "用户名已存在");
@@ -136,13 +135,13 @@ public class AuthService {
         return toMemberPublic(member);
     }
 
-    public Map<String, Object> getProfile(int memberId) {
+    public MemberResponse getProfile(int memberId) {
         Member member = repository.findMemberRowById(memberId).map(repository::toPublic)
                 .orElseThrow(() -> new ApiException(401, "登录已失效，请重新登录"));
         return toMemberPublic(member);
     }
 
-    public Map<String, Object> updateProfile(int memberId, String displayName) {
+    public MemberResponse updateProfile(int memberId, String displayName) {
         if (trim(displayName).isEmpty()) {
             throw new ApiException(400, "昵称不能为空");
         }
@@ -150,31 +149,31 @@ public class AuthService {
         return getProfile(memberId);
     }
 
-    public Map<String, Object> updateSettings(int memberId, String themePreference, String fontScale, boolean notifyEnabled) {
+    public MemberResponse updateSettings(int memberId, String themePreference, String fontScale, boolean notifyEnabled) {
         repository.updateSettings(memberId, themePreference, fontScale, notifyEnabled);
         return getProfile(memberId);
     }
 
-    public Map<String, Object> updateAvatar(int memberId, String avatarUrl) {
+    public MemberResponse updateAvatar(int memberId, String avatarUrl) {
         repository.updateAvatar(memberId, avatarUrl);
         return getProfile(memberId);
     }
 
-    public Map<String, Object> toMemberPublic(Member member) {
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("id", member.id());
-        out.put("username", member.username());
-        out.put("display_name", member.displayName());
-        out.put("role", member.role());
-        out.put("member_type", member.memberType());
-        out.put("is_active", member.isActive());
-        out.put("avatar_url", member.avatarUrl());
-        out.put("theme_preference", member.themePreference());
-        out.put("font_scale", member.fontScale());
-        out.put("notify_enabled", member.notifyEnabled());
-        out.put("last_login_at", member.lastLoginAt());
-        out.put("created_at", member.createdAt());
-        return out;
+    public MemberResponse toMemberPublic(Member member) {
+        return new MemberResponse(
+                member.id(),
+                member.username(),
+                member.displayName(),
+                member.role(),
+                member.memberType(),
+                member.isActive(),
+                member.avatarUrl(),
+                member.themePreference(),
+                member.fontScale(),
+                member.notifyEnabled(),
+                member.lastLoginAt() == null ? null : member.lastLoginAt().toString(),
+                member.createdAt() == null ? "" : member.createdAt().toString()
+        );
     }
 
     private void bootstrapAdmin() {
