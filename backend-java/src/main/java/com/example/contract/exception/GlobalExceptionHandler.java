@@ -26,12 +26,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<Map<String, String>> handleMediaType(HttpMediaTypeNotSupportedException ex) {
-        return ResponseEntity.status(415).body(Map.of("detail", ex.getMessage() == null ? "Unsupported Media Type" : ex.getMessage()));
+        return ResponseEntity.status(415).body(Map.of("detail", "不支持的请求格式，请检查 Content-Type。"));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleUnknown(Exception ex) {
         log.error("Unhandled exception", ex);
-        return ResponseEntity.status(500).body(Map.of("detail", ex.getMessage() == null ? "internal error" : ex.getMessage()));
+        return ResponseEntity.status(500).body(Map.of("detail", "服务器内部错误，请稍后重试。"));
     }
 }
