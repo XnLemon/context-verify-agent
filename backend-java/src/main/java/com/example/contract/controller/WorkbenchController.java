@@ -1,5 +1,6 @@
 package com.example.contract.controller;
 
+import com.example.contract.dto.*;
 import com.example.contract.exception.ApiException;
 import com.example.contract.model.Member;
 import com.example.contract.service.auth.AuthorizationService;
@@ -24,13 +25,13 @@ public class WorkbenchController {
     }
 
     @GetMapping("/api/workbench/summary")
-    public Map<String, Object> summary(@RequestHeader(value = "authorization", required = false) String authorization) {
+    public SummaryResponse summary(@RequestHeader(value = "authorization", required = false) String authorization) {
         Member member = authorizationService.requireLoggedIn(authorization);
         return workbenchService.summary(member);
     }
 
     @GetMapping("/api/workbench/contracts")
-    public Map<String, Object> contracts(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ContractListResponse contracts(@RequestHeader(value = "authorization", required = false) String authorization,
                                          @RequestParam(value = "status", required = false) String status,
                                          @RequestParam(value = "search", required = false) String search) {
         Member member = authorizationService.requireLoggedIn(authorization);
@@ -38,14 +39,14 @@ public class WorkbenchController {
     }
 
     @GetMapping("/api/workbench/contracts/{contractId}")
-    public Map<String, Object> detail(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ContractDetailResponse detail(@RequestHeader(value = "authorization", required = false) String authorization,
                                       @PathVariable String contractId) {
         Member member = authorizationService.requireLoggedIn(authorization);
         return workbenchService.contractDetail(contractId, member);
     }
 
     @PatchMapping("/api/workbench/contracts/{contractId}")
-    public Map<String, Object> update(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ContractResponse update(@RequestHeader(value = "authorization", required = false) String authorization,
                                       @PathVariable String contractId,
                                       @RequestBody Map<String, Object> payload) {
         Member member = authorizationService.requireEmployeeOperator(authorization);
@@ -56,7 +57,7 @@ public class WorkbenchController {
             value = "/api/workbench/contracts/{contractId}/scan",
             consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE}
     )
-    public Map<String, Object> scan(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ScanResponse scan(@RequestHeader(value = "authorization", required = false) String authorization,
                                     @PathVariable String contractId,
                                     @RequestParam(value = "contract_type", required = false) String contractType,
                                     @RequestParam(value = "our_side", defaultValue = "甲方") String ourSide) {
@@ -65,7 +66,7 @@ public class WorkbenchController {
     }
 
     @PostMapping("/api/workbench/contracts/{contractId}/chat")
-    public Map<String, Object> chat(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ChatResponse chat(@RequestHeader(value = "authorization", required = false) String authorization,
                                     @PathVariable String contractId,
                                     @RequestBody Map<String, Object> payload) {
         Member member = authorizationService.requireLoggedIn(authorization);
@@ -107,7 +108,7 @@ public class WorkbenchController {
     }
 
     @PostMapping("/api/workbench/contracts/{contractId}/issues/{issueId}/decision")
-    public Map<String, Object> decision(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ReviewResultResponse decision(@RequestHeader(value = "authorization", required = false) String authorization,
                                         @PathVariable String contractId,
                                         @PathVariable String issueId,
                                         @RequestBody Map<String, Object> payload) {
@@ -116,7 +117,7 @@ public class WorkbenchController {
     }
 
     @PostMapping("/api/workbench/contracts/{contractId}/final-decision")
-    public Map<String, Object> finalDecision(@RequestHeader(value = "authorization", required = false) String authorization,
+    public FinalizeResponse finalDecision(@RequestHeader(value = "authorization", required = false) String authorization,
                                              @PathVariable String contractId,
                                              @RequestBody Map<String, Object> payload) {
         Member member = authorizationService.requireFinalApprover(authorization);
@@ -125,7 +126,7 @@ public class WorkbenchController {
     }
 
     @PostMapping("/api/workbench/contracts/{contractId}/redraft")
-    public Map<String, Object> redraft(@RequestHeader(value = "authorization", required = false) String authorization,
+    public RedraftResponse redraft(@RequestHeader(value = "authorization", required = false) String authorization,
                                        @PathVariable String contractId,
                                        @RequestBody Map<String, Object> payload) {
         Member member = authorizationService.requireLoggedIn(authorization);
@@ -133,14 +134,14 @@ public class WorkbenchController {
     }
 
     @GetMapping("/api/workbench/contracts/{contractId}/history")
-    public List<Map<String, Object>> history(@RequestHeader(value = "authorization", required = false) String authorization,
+    public List<HistoryResponse> history(@RequestHeader(value = "authorization", required = false) String authorization,
                                              @PathVariable String contractId) {
         Member member = authorizationService.requireLoggedIn(authorization);
         return workbenchService.history(contractId, member);
     }
 
     @PostMapping(value = "/api/workbench/contracts/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Map<String, Object> importContract(@RequestHeader(value = "authorization", required = false) String authorization,
+    public ImportContractResponse importContract(@RequestHeader(value = "authorization", required = false) String authorization,
                                               @RequestParam("file") MultipartFile file,
                                               @RequestParam(value = "contract_type", required = false) String contractType,
                                               @RequestParam(value = "author", required = false) String author) throws Exception {

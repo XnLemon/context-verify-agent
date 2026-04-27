@@ -1,6 +1,7 @@
 package com.example.contract.service.workbench;
 
 import com.example.contract.config.AppProperties;
+import com.example.contract.dto.*;
 import com.example.contract.exception.ApiException;
 import com.example.contract.model.Member;
 import com.example.contract.repository.WorkbenchRepository;
@@ -12,11 +13,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.function.Consumer;
 
 @Service
 public class WorkbenchService {
-    private static final Set<String> VALID_ISSUE_STATUSES = Set.of("pending", "accepted", "rejected");
     private final WorkbenchRepository repository;
     private final AgentGateway agentGateway;
     private final AppProperties props;
@@ -27,7 +26,7 @@ public class WorkbenchService {
         this.props = props;
     }
 
-    public Map<String, Object> summary(Member currentMember) {
+    public SummaryResponse summary(Member currentMember) {
         List<Map<String, Object>> contracts = visibleContracts(currentMember);
         int pendingCount = (int) contracts.stream().filter(c -> "pending".equals(c.get("status"))).count();
         int total = contracts.size();
@@ -42,16 +41,16 @@ public class WorkbenchService {
             }
         }
         double compliance = reviewed == 0 ? 100.0 : Math.round((double) (reviewed - highRisk) / reviewed * 1000.0) / 10.0;
-        return Map.of(
-                "pendingCount", pendingCount,
-                "complianceRate", compliance,
-                "highRiskCount", highRisk,
-                "averageReviewDurationHours", 0.0,
-                "totalContracts", total
+        return new SummaryResponse(
+                pendingCount,
+                compliance,
+                highRisk,
+                0.0,
+                total
         );
     }
 
-    public Map<String, Object> listContracts(String status, String search, Member currentMember) {
+    public ContractListResponse listContracts(String status, String search, Member currentMember) {
         String keyword = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         List<Map<String, Object>> items = new ArrayList<>();
         for (Map<String, Object> contract : visibleContracts(currentMember)) {
@@ -67,23 +66,23 @@ public class WorkbenchService {
             items.add(toContractListItem(contract));
         }
         items.sort((a, b) -> String.valueOf(b.get("updatedAt")).compareTo(String.valueOf(a.get("updatedAt"))));
-        return Map.of("items", items, "total", items.size());
+        return new ContractListResponse(DTOConverter.toContractList(items), items.size());
     }
 
-    public Map<String, Object> contractDetail(String contractId, Member currentMember) {
+    public ContractDetailResponse contractDetail(String contractId, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("contract", toContractListItem(contract));
-        repository.getReview(contractId).ifPresent(review -> out.put("latestReview", toReviewResult(review)));
         int memberId = memberScopeId(currentMember);
-        out.put("chatMessages", repository.getChatMessages(contractId, memberId));
-        if (!out.containsKey("latestReview")) {
-            out.put("latestReview", null);
-        }
-        return out;
+        ReviewResultResponse review = repository.getReview(contractId)
+                .map(DTOConverter::toReview)
+                .orElse(null);
+        return new ContractDetailResponse(
+                DTOConverter.toContract(contract),
+                review,
+                DTOConverter.toChatMessageList(repository.getChatMessages(contractId, memberId))
+        );
     }
 
-    public Map<String, Object> importContract(String fileName, byte[] content, String contractType, String author, String ownerUsername, Member currentMember) {
+    public ImportContractResponse importContract(String fileName, byte[] content, String contractType, String author, String ownerUsername, Member currentMember) {
         Map<String, Object> parsed = agentGateway.parseFile(fileName, content);
         Map<String, Object> document = (Map<String, Object>) parsed.get("document");
         Map<String, Object> metadata = (Map<String, Object>) document.get("metadata");
@@ -99,11 +98,10 @@ public class WorkbenchService {
         String id = "contract-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         repository.createContract(title, type, "pending", author, ownerUsername, rawText, fileName, id);
         appendHistory(id, currentMember, "import", "导入合同", "已从文件 " + fileName + " 导入合同。", Map.of("file_name", fileName));
-        Map<String, Object> contract = requireContract(id, currentMember);
-        return Map.of("contract", toContractListItem(contract));
+        return new ImportContractResponse(DTOConverter.toContract(requireContract(id, currentMember)));
     }
 
-    public Map<String, Object> updateContractContent(String contractId, String content, Member currentMember) {
+    public ContractResponse updateContractContent(String contractId, String content, Member currentMember) {
         if (content == null || content.isBlank()) {
             throw new ApiException(400, "合同正文不能为空。");
         }
@@ -113,10 +111,10 @@ public class WorkbenchService {
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
         appendHistory(contractId, currentMember, "manual_edit", "手动编辑合同", "已手动更新合同正文，建议重新执行扫描。", Map.of("content_length", String.valueOf(content.length())));
-        return Map.of("contract", toContractListItem(contract));
+        return DTOConverter.toContract(contract);
     }
 
-    public Map<String, Object> scanContract(String contractId, String contractType, String ourSide, Member currentMember) {
+    public ScanResponse scanContract(String contractId, String contractType, String ourSide, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         Map<String, Object> review = agentGateway.reviewText((String) contract.get("content"), contractType != null ? contractType : (String) contract.get("type"), ourSide);
         Map<String, Object> stored = buildStoredReview(contractId, review, null);
@@ -125,96 +123,30 @@ public class WorkbenchService {
         contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
-        int historyCount = appendHistory(contractId, currentMember, "scan", "完成合同扫描", "已完成扫描。", Map.of("overall_risk", String.valueOf(((Map<String, Object>) review.get("summary")).get("overall_risk"))));
-        return Map.of(
-                "contract", toContractListItem(contract),
-                "latestReview", toReviewResult(stored),
-                "historyCount", historyCount
+        int historyCount = appendHistory(contractId, currentMember, "scan", "完成合同扫描", "完成扫描。", Map.of("overall_risk", String.valueOf(((Map<String, Object>) review.get("summary")).get("overall_risk"))));
+        return new ScanResponse(
+                DTOConverter.toContract(contract),
+                DTOConverter.toReview(stored),
+                historyCount
         );
     }
 
-    public Map<String, Object> chatContract(String contractId, Map<String, Object> payload, Member currentMember) {
-        ChatContext chatContext = prepareChatContext(contractId, payload, currentMember);
-        Map<String, Object> chat = agentGateway.chat(chatContext.chatPayload());
-        return finalizeChat(contractId, chatContext, chat, currentMember, null);
-    }
-
-    public void chatContractStream(
-            String contractId,
-            Map<String, Object> payload,
-            Member currentMember,
-            Consumer<AgentGateway.ChatStreamEvent> eventConsumer
-    ) {
-        ChatContext chatContext = prepareChatContext(contractId, payload, currentMember);
-        Map<String, Object> streamAssistant = chatMessage("assistant", "");
-        eventConsumer.accept(new AgentGateway.ChatStreamEvent(
-                "start",
-                Jsons.toJson(Map.of(
-                        "id", asString(streamAssistant.get("id")),
-                        "timestamp", asString(streamAssistant.get("timestamp"))
-                ))
-        ));
-
-        StringBuilder streamedAnswer = new StringBuilder();
-        Map<String, Object> donePayload = null;
-        Iterator<AgentGateway.ChatStreamEvent> events = agentGateway.chatStream(chatContext.chatPayload());
-
-        while (events.hasNext()) {
-            AgentGateway.ChatStreamEvent event = events.next();
-            String eventName = event.event() == null ? "" : event.event();
-            if ("delta".equals(eventName)) {
-                Map<String, Object> data = parseEventData(event.dataJson());
-                streamedAnswer.append(asString(data.get("delta")));
-                eventConsumer.accept(event);
-                continue;
-            }
-            if ("done".equals(eventName)) {
-                donePayload = Jsons.toMap(event.dataJson());
-                continue;
-            }
-            if ("error".equals(eventName)) {
-                eventConsumer.accept(event);
-                return;
-            }
-            if (!eventName.isBlank()) {
-                eventConsumer.accept(event);
-            }
-        }
-
-        if (donePayload == null) {
-            donePayload = new LinkedHashMap<>();
-            donePayload.put("intent", "chat");
-            donePayload.put("tool_used", "chat_stream_fallback");
-            donePayload.put("answer", streamedAnswer.toString());
-            donePayload.put("review_result", null);
-        } else if (asString(donePayload.get("answer")).isBlank() && streamedAnswer.length() > 0) {
-            donePayload = new LinkedHashMap<>(donePayload);
-            donePayload.put("answer", streamedAnswer.toString());
-        }
-
-        Map<String, Object> finalPayload = finalizeChat(contractId, chatContext, donePayload, currentMember, streamAssistant);
-        eventConsumer.accept(new AgentGateway.ChatStreamEvent("done", Jsons.toJson(finalPayload)));
-    }
-
-    private ChatContext prepareChatContext(String contractId, Map<String, Object> payload, Member currentMember) {
+    public ChatResponse chatContract(String contractId, Map<String, Object> payload, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         int memberId = memberScopeId(currentMember);
         List<Map<String, Object>> messages = new ArrayList<>();
         Object payloadMsgs = payload.get("messages");
         if (payloadMsgs instanceof List<?> m && !m.isEmpty()) {
-            for (Object item : m) {
-                messages.add((Map<String, Object>) item);
-            }
+            for (Object item : m) messages.add((Map<String, Object>) item);
         } else {
             messages.addAll(repository.getChatMessages(contractId, memberId));
         }
-
         String message = asString(payload.get("message"));
         if (!message.isBlank()) {
             messages.add(chatMessage("user", message));
         }
         if (messages.isEmpty()) {
-            throw new ApiException(400, "At least one user message is required.");
+            throw new ApiException(400, "至少需要一条用户消息。");
         }
 
         Map<String, Object> chatPayload = new LinkedHashMap<>();
@@ -222,98 +154,40 @@ public class WorkbenchService {
         chatPayload.put("contract_text", contract.get("content"));
         chatPayload.put("contract_type", payload.getOrDefault("contract_type", contract.get("type")));
         chatPayload.put("our_side", payload.getOrDefault("our_side", "甲方"));
+        Map<String, Object> chat = agentGateway.chat(chatPayload);
 
-        return new ChatContext(contract, memberId, messages, chatPayload);
-    }
-
-    private Map<String, Object> finalizeChat(
-            String contractId,
-            ChatContext chatContext,
-            Map<String, Object> chat,
-            Member currentMember,
-            Map<String, Object> prebuiltAssistant
-    ) {
-        String answer = asString(chat.get("answer"));
-        Map<String, Object> assistant = prebuiltAssistant == null ? chatMessage("assistant", answer) : new LinkedHashMap<>(prebuiltAssistant);
-        assistant.put("role", "assistant");
-        assistant.put("content", answer);
-        if (asString(assistant.get("id")).isBlank()) {
-            assistant.put("id", "msg-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
-        }
-        if (asString(assistant.get("timestamp")).isBlank()) {
-            assistant.put("timestamp", OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("HH:mm")));
-        }
-        assistant.put("created_at", OffsetDateTime.now());
-
-        chatContext.messages().add(assistant);
-        repository.saveChatMessages(contractId, chatContext.memberId(), chatContext.messages());
+        Map<String, Object> assistant = chatMessage("assistant", asString(chat.get("answer")));
+        messages.add(assistant);
+        repository.saveChatMessages(contractId, memberId, messages);
 
         Object reviewObj = chat.get("review_result");
         Object latestReview = null;
         if (reviewObj instanceof Map<?, ?> reviewResult) {
-            Map<String, String> previousStatuses = repository.getReview(contractId)
-                    .map(r -> (List<Map<String, Object>>) r.get("issues"))
-                    .orElse(List.of())
-                    .stream()
-                    .filter(i -> i.get("id") != null)
-                    .collect(java.util.stream.Collectors.toMap(
-                            i -> String.valueOf(i.get("id")),
-                            i -> asString(i.get("status")),
-                            (a, b) -> a,
-                            LinkedHashMap::new
-                    ));
-            Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, previousStatuses);
+            Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, null);
             saveStoredReview(stored);
-            chatContext.contract().put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
-            chatContext.contract().put("updated_at", OffsetDateTime.now());
-            repository.saveContract(chatContext.contract());
+            contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
+            contract.put("updated_at", OffsetDateTime.now());
+            repository.saveContract(contract);
             latestReview = toReviewResult(stored);
         }
 
-        appendHistory(
-                contractId,
-                currentMember,
-                "chat",
-                "新增 AI 对话",
-                asString(chatContext.messages().get(chatContext.messages().size() - 2).get("content")),
-                Map.of("tool_used", asString(chat.get("tool_used")))
+        appendHistory(contractId, currentMember, "chat", "新增 AI 对话", asString(messages.get(messages.size() - 2).get("content")), Map.of("tool_used", asString(chat.get("tool_used"))));
+        return new ChatResponse(
+                asStr(chat.getOrDefault("intent", "chat")),
+                asStr(chat.getOrDefault("tool_used", "chat")),
+                DTOConverter.toChatMessage(assistant),
+                DTOConverter.toChatMessageList(messages),
+                latestReview instanceof Map<?, ?> r ? DTOConverter.toReview((Map<String, Object>) r) : null
         );
-
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("intent", chat.getOrDefault("intent", "chat"));
-        out.put("toolUsed", chat.getOrDefault("tool_used", "chat"));
-        out.put("assistantMessage", assistant);
-        out.put("messages", chatContext.messages());
-        out.put("latestReview", latestReview);
-        Object traceSummary = chat.containsKey("traceSummary") ? chat.get("traceSummary") : chat.get("trace_summary");
-        if (traceSummary != null) {
-            out.put("traceSummary", traceSummary);
-        }
-        return out;
     }
 
-    private Map<String, Object> parseEventData(String dataJson) {
-        if (dataJson == null || dataJson.isBlank()) {
-            return Map.of();
-        }
-        return Jsons.toMap(dataJson);
-    }
-
-    private record ChatContext(
-            Map<String, Object> contract,
-            int memberId,
-            List<Map<String, Object>> messages,
-            Map<String, Object> chatPayload
-    ) {}
-
-    public Map<String, Object> decideIssue(String contractId, String issueId, Map<String, Object> payload, Member currentMember) {
+    public ReviewResultResponse decideIssue(String contractId, String issueId, Map<String, Object> payload, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         Map<String, Object> review = repository.getReview(contractId).orElseThrow(() -> new ApiException(404, "Contract review not found: " + contractId));
         String status = asString(payload.get("status"));
-        if (!VALID_ISSUE_STATUSES.contains(status)) {
-            throw new ApiException(400, "Issue status must be one of pending, accepted, rejected.");
+        if (!Set.of("accepted", "rejected", "pending", "overridden").contains(status)) {
+            throw new ApiException(400, "无效的问题状态: " + status);
         }
-        boolean autoRedraft = parseBoolean(payload.get("auto_redraft"));
         boolean found = false;
         List<Map<String, Object>> issues = (List<Map<String, Object>>) review.get("issues");
         for (Map<String, Object> issue : issues) {
@@ -330,39 +204,10 @@ public class WorkbenchService {
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
         appendHistory(contractId, currentMember, "issue_decision", "更新风险处理状态", "问题 " + issueId + " 已标记为 " + status + "。", Map.of("issue_id", issueId, "status", status));
-        boolean autoRedraftAttempted = false;
-        boolean autoRedraftSucceeded = false;
-        String autoRedraftError = null;
-        if ("accepted".equals(status) && autoRedraft) {
-            autoRedraftAttempted = true;
-            String ourSide = asString(payload.get("our_side"));
-            if (ourSide.isBlank()) {
-                ourSide = "鐢叉柟";
-            }
-            try {
-                redraftContract(contractId, ourSide, currentMember);
-                autoRedraftSucceeded = true;
-            } catch (Exception e) {
-                autoRedraftError = e.getClass().getSimpleName();
-                appendHistory(contractId, currentMember, "redraft_failed", "Auto redraft failed",
-                        "Auto redraft failed but issue decision was saved.",
-                        Map.of("issue_id", issueId, "error", autoRedraftError));
-            }
-        }
-        Map<String, Object> response = new LinkedHashMap<>(toReviewResult(repository.getReview(contractId).orElseThrow()));
-        if (autoRedraftAttempted) {
-            Map<String, Object> autoRedraftResult = new LinkedHashMap<>();
-            autoRedraftResult.put("attempted", true);
-            autoRedraftResult.put("succeeded", autoRedraftSucceeded);
-            if (!autoRedraftSucceeded) {
-                autoRedraftResult.put("error", autoRedraftError == null ? "UnknownError" : autoRedraftError);
-            }
-            response.put("autoRedraft", autoRedraftResult);
-        }
-        return response;
+        return DTOConverter.toReview(repository.getReview(contractId).orElseThrow());
     }
 
-    public Map<String, Object> redraftContract(String contractId, String ourSide, Member currentMember) {
+    public RedraftResponse redraftContract(String contractId, String ourSide, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         Map<String, Object> review = repository.getReview(contractId).orElseThrow(() -> new ApiException(404, "Contract review not found: " + contractId));
         List<Map<String, Object>> accepted = ((List<Map<String, Object>>) review.get("issues")).stream()
@@ -381,15 +226,15 @@ public class WorkbenchService {
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
         appendHistory(contractId, currentMember, "redraft", "生成合同修订稿", "已基于 " + accepted.size() + " 条采纳建议生成合同修订稿。", Map.of("accepted_issue_count", String.valueOf(accepted.size())));
-        return Map.of("contract", toContractListItem(contract), "latestReview", toReviewResult(review), "acceptedIssueCount", accepted.size());
+        return new RedraftResponse(DTOConverter.toContract(contract), DTOConverter.toReview(review), accepted.size());
     }
 
-    public List<Map<String, Object>> history(String contractId, Member currentMember) {
+    public List<HistoryResponse> history(String contractId, Member currentMember) {
         requireContract(contractId, currentMember);
-        return repository.getHistory(contractId, memberScopeId(currentMember));
+        return DTOConverter.toHistoryList(repository.getHistory(contractId, memberScopeId(currentMember)));
     }
 
-    public Map<String, Object> finalizeContract(String contractId, String status, String operatorName, String comment, Member currentMember) {
+    public FinalizeResponse finalizeContract(String contractId, String status, String operatorName, String comment, Member currentMember) {
         if (!"approved".equals(status) && !"rejected".equals(status)) {
             throw new ApiException(400, "最终审批状态必须为 approved 或 rejected。");
         }
@@ -398,9 +243,9 @@ public class WorkbenchService {
         contract.put("updated_at", OffsetDateTime.now());
         repository.saveContract(contract);
         int historyCount = appendHistory(contractId, currentMember, "final_decision", "完成最终审批",
-                operatorName + " 将合同标记为 " + ("approved".equals(status) ? "通过" : "驳回") + (comment != null && !comment.isBlank() ? "。备注：" + comment : "。"),
+                operatorName + " 将合同标记为 " + ("approved".equals(status) ? "通过" : "驳回") + (comment != null && !comment.isBlank() ? "。 备注：" + comment : "。"),
                 Map.of("status", status, "operator", operatorName));
-        return Map.of("contract", toContractListItem(contract), "historyCount", historyCount);
+        return new FinalizeResponse(DTOConverter.toContract(contract), historyCount);
     }
 
     private Map<String, Object> requireContract(String contractId, Member currentMember) {
@@ -506,7 +351,7 @@ public class WorkbenchService {
     }
 
     private String mapIssueType(String domain, String severity) {
-        if (domain.contains("涓讳綋") || domain.contains("鍚堣") || domain.contains("璧勮川")) {
+        if (domain.contains("主体") || domain.contains("合规") || domain.contains("资质")) {
             return "compliance";
         }
         if ("low".equals(severity)) {
@@ -516,16 +361,7 @@ public class WorkbenchService {
     }
 
     private String deriveStatus(List<Map<String, Object>> issues) {
-        if (issues == null || issues.isEmpty()) {
-            return "approved";
-        }
-        for (Map<String, Object> issue : issues) {
-            String issueStatus = asString(issue.get("status"));
-            if (!VALID_ISSUE_STATUSES.contains(issueStatus) || "pending".equals(issueStatus)) {
-                return "reviewing";
-            }
-        }
-        return "approved";
+        return issues.stream().anyMatch(i -> "pending".equals(i.get("status"))) ? "reviewing" : "approved";
     }
 
     private Map<String, Object> chatMessage(String role, String content) {
@@ -547,17 +383,4 @@ public class WorkbenchService {
     private String asString(Object value) {
         return value == null ? "" : value.toString();
     }
-
-    private boolean parseBoolean(Object value) {
-        if (value instanceof Boolean b) {
-            return b;
-        }
-        return value != null && Boolean.parseBoolean(value.toString());
-    }
 }
-
-
-
-
-
-
