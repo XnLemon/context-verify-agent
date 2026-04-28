@@ -87,11 +87,11 @@ class ContractEditor:
         lines: list[str] = []
         for index, issue in enumerate(accepted_issues, start=1):
             lines.append(
-                f"{index}. 问题：{issue.get('message') or '未命名问题'}\\n"
-                f"   建议：{issue.get('suggestion') or '无'}\\n"
+                f"{index}. 问题：{issue.get('message') or '未命名问题'}\n"
+                f"   建议：{issue.get('suggestion') or '无'}\n"
                 f"   位置：{issue.get('location') or '未标注'}"
             )
-        return "\\n".join(lines)
+        return "\n".join(lines)
 
     def _build_segments(self, contract_text: str, max_chunk_chars: int) -> list[str]:
         blocks = self._split_contract_into_blocks(contract_text)

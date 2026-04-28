@@ -20,7 +20,9 @@ from app.services.rule_engine import RuleEngine
 
 try:
     from app.llm.reviewer import LLMReviewer
-except Exception:
+except Exception as exc:
+    import logging
+    logging.getLogger(__name__).warning("Failed to import LLMReviewer: %s", exc)
     LLMReviewer = None
 
 

@@ -332,7 +332,10 @@ class ChatService:
                         }
                     return data
             except json.JSONDecodeError:
-                pass
+                import logging
+                logging.getLogger(__name__).warning(
+                    "LLM router returned malformed JSON, falling back to keyword routing. Raw output: %s", raw
+                )
 
         if self._is_explicit_review_request(latest):
             return {"intent": "review", "query": latest, "reason": "fallback-review"}

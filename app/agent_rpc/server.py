@@ -44,6 +44,8 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=400, error=str(exc))
         except RuntimeError as exc:
             return agent_pb2.JsonResponse(code=503, error=str(exc))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"unexpected error: {exc}")
 
     def Review(self, request, context):
         try:
@@ -67,6 +69,8 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=400, error=str(exc))
         except RuntimeError as exc:
             return agent_pb2.JsonResponse(code=503, error=str(exc))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"unexpected error: {exc}")
 
     def Chat(self, request, context):
         try:
@@ -78,6 +82,8 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=400, error=str(exc))
         except RuntimeError as exc:
             return agent_pb2.JsonResponse(code=503, error=str(exc))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"unexpected error: {exc}")
 
     def ChatStream(self, request, context):
         try:
@@ -118,6 +124,8 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=400, error=str(exc))
         except RuntimeError as exc:
             return agent_pb2.JsonResponse(code=503, error=str(exc))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"unexpected error: {exc}")
 
 
 def serve() -> None:

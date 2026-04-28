@@ -7,6 +7,9 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.List;
@@ -14,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class GrpcAgentGateway implements AgentGateway {
+    private static final Logger log = LoggerFactory.getLogger(GrpcAgentGateway.class);
     private final ManagedChannel channel;
     private final AgentRpcServiceGrpc.AgentRpcServiceBlockingStub stub;
     private final long timeoutMillis;
@@ -96,10 +100,16 @@ public class GrpcAgentGateway implements AgentGateway {
         return revised == null ? contractText : revised.toString();
     }
 
+    @PreDestroy
+    public void shutdown() {
+        channel.shutdown();
+    }
+
     private JsonResponse call(RpcCall call) {
         try {
             return call.exec();
         } catch (StatusRuntimeException ex) {
+            log.error("gRPC call failed: status={}, description={}", ex.getStatus().getCode(), ex.getStatus().getDescription(), ex);
             throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
         }
     }

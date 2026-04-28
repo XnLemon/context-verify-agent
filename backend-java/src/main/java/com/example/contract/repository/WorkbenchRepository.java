@@ -1,8 +1,11 @@
 package com.example.contract.repository;
 
 import com.example.contract.util.Jsons;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,6 +16,7 @@ import java.util.Optional;
 
 @Repository
 public class WorkbenchRepository {
+    private static final Logger log = LoggerFactory.getLogger(WorkbenchRepository.class);
     private final JdbcTemplate jdbc;
 
     public WorkbenchRepository(JdbcTemplate jdbc) {
@@ -92,6 +96,7 @@ public class WorkbenchRepository {
                 """, this::toChatMessage, contractId, memberId);
     }
 
+    @Transactional
     public void saveChatMessages(String contractId, int memberId, List<Map<String, Object>> messages) {
         Integer threadId = jdbc.query("select id from chat_threads where contract_id=? and member_id=?", (rs, i) -> rs.getInt("id"), contractId, memberId)
                 .stream().findFirst().orElse(null);
@@ -190,7 +195,8 @@ public class WorkbenchRepository {
                 // Backward-compatible fallback for malformed historical values.
                 return List.of(raw);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("Failed to parse JSON value as list: {}", raw, e);
             return List.of(raw);
         }
         return List.of(raw);
