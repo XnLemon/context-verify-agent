@@ -43,8 +43,8 @@ public class AuthController {
                                jakarta.servlet.http.HttpServletRequest request) {
         return authService.login(
                 String.valueOf(payload.getOrDefault("username", "")),
-                String.valueOf(payload.getOrDefault("challenge_token", "")),
-                String.valueOf(payload.getOrDefault("password_proof", "")),
+                String.valueOf(payload.getOrDefault("challengeToken", "")),
+                String.valueOf(payload.getOrDefault("passwordProof", "")),
                 request.getRemoteAddr(),
                 userAgent
         );
@@ -72,7 +72,7 @@ public class AuthController {
     public MemberResponse updateProfile(@RequestHeader(value = "authorization", required = false) String authorization,
                                              @RequestBody Map<String, Object> payload) {
         Member member = authorizationService.requireLoggedIn(authorization);
-        return authService.updateProfile(member.id(), String.valueOf(payload.getOrDefault("display_name", "")));
+        return authService.updateProfile(member.id(), String.valueOf(payload.getOrDefault("displayName", "")));
     }
 
     @PostMapping(value = "/api/auth/profile/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -114,9 +114,9 @@ public class AuthController {
         Member member = authorizationService.requireLoggedIn(authorization);
         return authService.updateSettings(
                 member.id(),
-                String.valueOf(payload.getOrDefault("theme_preference", "system")),
-                String.valueOf(payload.getOrDefault("font_scale", "medium")),
-                Boolean.parseBoolean(String.valueOf(payload.getOrDefault("notify_enabled", true)))
+                String.valueOf(payload.getOrDefault("themePreference", "system")),
+                String.valueOf(payload.getOrDefault("fontScale", "medium")),
+                Boolean.parseBoolean(String.valueOf(payload.getOrDefault("notifyEnabled", true)))
         );
     }
 

@@ -114,14 +114,14 @@ public class AuthService {
 
     public MemberResponse createEmployee(Map<String, Object> payload) {
         String username = trim((String) payload.get("username"));
-        String displayName = trim((String) payload.get("display_name"));
+        String displayName = trim((String) payload.get("displayName"));
         String password = trim((String) payload.get("password"));
-        String memberType = trim((String) payload.getOrDefault("member_type", "legal"));
+        String memberType = trim((String) payload.getOrDefault("memberType", "legal"));
 
         if (username.isEmpty() || displayName.isEmpty() || password.isEmpty()) {
             throw new ApiException(400, "用户名、昵称和密码不能为空");
         }
-        if (!Set.of("legal", "finance", "admin").contains(memberType)) {
+        if (!Set.of("legal", "procurement", "business", "other", "admin").contains(memberType)) {
             throw new ApiException(400, "无效的成员类型");
         }
         if (repository.findMemberRowByUsername(username).isPresent()) {
