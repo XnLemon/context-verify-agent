@@ -187,7 +187,7 @@ export function getWorkbenchContractDetail(contractId: string) {
 }
 
 export function updateWorkbenchContractContent(contractId: string, content: string) {
-  return request<{ contract: Contract }>(`/api/workbench/contracts/${contractId}`, {
+  return request<Contract>(`/api/workbench/contracts/${contractId}`, {
     method: 'PATCH',
     body: JSON.stringify({ content }),
   });

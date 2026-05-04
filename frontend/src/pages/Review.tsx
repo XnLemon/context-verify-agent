@@ -280,8 +280,8 @@ export default function Review({
     setIsSavingContent(true);
     setError(null);
     try {
-      const result = await updateWorkbenchContractContent(contractId, draftContent);
-      setContract(result.contract);
+      const updated = await updateWorkbenchContractContent(contractId, draftContent);
+      setContract(updated);
       setLatestReview(null);
       setIsEditingContent(false);
       await refreshHistory(contractId);
