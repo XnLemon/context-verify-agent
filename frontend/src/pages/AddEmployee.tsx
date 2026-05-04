@@ -3,14 +3,14 @@
 import { createEmployee } from '@/src/lib/api';
 import type { CreateEmployeeRequest } from '@/src/types';
 
-const memberTypeOptions: CreateEmployeeRequest['member_type'][] = ['legal', 'procurement', 'business', 'other'];
+const memberTypeOptions: CreateEmployeeRequest['memberType'][] = ['legal', 'procurement', 'business', 'other'];
 
 export default function AddEmployee() {
   const [form, setForm] = useState<CreateEmployeeRequest>({
     username: '',
     password: '',
-    display_name: '',
-    member_type: 'legal',
+    displayName: '',
+    memberType: 'legal',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +24,8 @@ export default function AddEmployee() {
 
     try {
       const member = await createEmployee(form);
-      setSuccess(`员工 ${member.display_name} 创建成功`);
-      setForm({ username: '', password: '', display_name: '', member_type: 'legal' });
+      setSuccess(`员工 ${member.displayName} 创建成功`);
+      setForm({ username: '', password: '', displayName: '', memberType: 'legal' });
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建员工失败');
     } finally {
@@ -52,8 +52,8 @@ export default function AddEmployee() {
         <div>
           <label className="mb-1 block text-sm text-slate-700">姓名</label>
           <input
-            value={form.display_name}
-            onChange={(event) => setForm((prev) => ({ ...prev, display_name: event.target.value }))}
+            value={form.displayName}
+            onChange={(event) => setForm((prev) => ({ ...prev, displayName: event.target.value }))}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
             required
           />
@@ -74,9 +74,9 @@ export default function AddEmployee() {
         <div>
           <label className="mb-1 block text-sm text-slate-700">成员类型</label>
           <select
-            value={form.member_type}
+            value={form.memberType}
             onChange={(event) =>
-              setForm((prev) => ({ ...prev, member_type: event.target.value as CreateEmployeeRequest['member_type'] }))
+              setForm((prev) => ({ ...prev, memberType: event.target.value as CreateEmployeeRequest['memberType'] }))
             }
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
           >

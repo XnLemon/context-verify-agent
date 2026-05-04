@@ -98,10 +98,10 @@ export default function App() {
       return;
     }
 
-    applyThemePreference(currentUser.theme_preference ?? 'system');
-    applyFontScale(currentUser.font_scale ?? 'medium');
+    applyThemePreference(currentUser.themePreference ?? 'system');
+    applyFontScale(currentUser.fontScale ?? 'medium');
 
-    if (currentUser.theme_preference !== 'system') {
+    if (currentUser.themePreference !== 'system') {
       return;
     }
 
@@ -154,6 +154,23 @@ export default function App() {
     setCurrentUser(member);
     updateAuthSessionMember(member);
   };
+
+  const pageTitles: Record<AppPage, string> = {
+    dashboard: '工作台 - SmartAudit',
+    library: '合同库 - SmartAudit',
+    reviewed: '已审核 - SmartAudit',
+    alerts: '风险预警 - SmartAudit',
+    pending: '待处理 - SmartAudit',
+    employees: '员工管理 - SmartAudit',
+    'add-employee': '添加员工 - SmartAudit',
+    'system-settings': '系统设置 - SmartAudit',
+    'profile-info': '个人信息 - SmartAudit',
+    review: '合同审核 - SmartAudit',
+  };
+
+  React.useEffect(() => {
+    document.title = pageTitles[currentPage] ?? 'SmartAudit';
+  }, [currentPage]);
 
   if (!currentUser) {
     return <LoginPage onLoginSuccess={(member) => setCurrentUser(member)} />;
@@ -215,12 +232,12 @@ export default function App() {
               onClick={() => navigateToList('profile-info')}
             >
               <div className="text-right">
-                <p className="text-sm font-medium">{currentUser.display_name}</p>
-                <p className="text-xs text-slate-500">{currentUser.role === 'admin' ? '管理员' : '员工'} / {currentUser.member_type}</p>
+                <p className="text-sm font-medium">{currentUser.displayName}</p>
+                <p className="text-xs text-slate-500">{currentUser.role === 'admin' ? '管理员' : '员工'} / {currentUser.memberType}</p>
               </div>
               <div className="w-10 h-10 bg-slate-200 rounded-full overflow-hidden border border-slate-200">
                 <img
-                  src={buildApiAssetUrl(currentUser.avatar_url) ?? `https://picsum.photos/seed/${currentUser.username}/100/100`}
+                  src={buildApiAssetUrl(currentUser.avatarUrl) ?? `https://picsum.photos/seed/${currentUser.username}/100/100`}
                   alt="Avatar"
                   referrerPolicy="no-referrer"
                 />

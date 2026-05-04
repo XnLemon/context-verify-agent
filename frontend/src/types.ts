@@ -56,6 +56,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  traceSummary?: ChatTraceSummaryItem[];
 }
 
 export interface HistoryItem {
@@ -121,28 +122,28 @@ export type UserMemberType = 'admin' | 'legal' | 'procurement' | 'business' | 'o
 export interface UserMember {
   id: number;
   username: string;
-  display_name: string;
+  displayName: string;
   role: UserRole;
-  member_type: UserMemberType;
-  is_active: boolean;
-  avatar_url: string | null;
-  theme_preference: ThemePreference;
-  font_scale: FontScale;
-  notify_enabled: boolean;
-  last_login_at: string | null;
-  created_at: string;
+  memberType: UserMemberType;
+  isActive: boolean;
+  avatarUrl: string | null;
+  themePreference: ThemePreference;
+  fontScale: FontScale;
+  notifyEnabled: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
 }
 
 export interface LoginChallengeResponse {
-  challenge_token: string;
+  challengeToken: string;
   nonce: string;
   salt: string;
-  expires_at: string;
+  expiresAt: string;
 }
 
 export interface LoginResponse {
   token: string;
-  expires_at: string;
+  expiresAt: string;
   member: UserMember;
 }
 
@@ -154,23 +155,23 @@ export interface EmployeeListResponse {
 export interface CreateEmployeeRequest {
   username: string;
   password: string;
-  display_name: string;
-  member_type: Exclude<UserMemberType, 'admin'>;
+  displayName: string;
+  memberType: Exclude<UserMemberType, 'admin'>;
 }
 
 
 export interface UpdateProfileRequest {
-  display_name: string;
+  displayName: string;
 }
 
 export interface UpdateSettingsRequest {
-  theme_preference: ThemePreference;
-  font_scale: FontScale;
-  notify_enabled: boolean;
+  themePreference: ThemePreference;
+  fontScale: FontScale;
+  notifyEnabled: boolean;
 }
 
 export interface AvatarUploadResponse {
-  avatar_url: string;
+  avatarUrl: string;
   member: UserMember;
 }
 

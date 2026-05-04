@@ -11,7 +11,7 @@ interface ProfileInfoProps {
 const ACCEPTED_AVATAR_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
 export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoProps) {
-  const [displayName, setDisplayName] = useState(currentUser.display_name);
+  const [displayName, setDisplayName] = useState(currentUser.displayName);
   const [loadingName, setLoadingName] = useState(false);
   const [loadingAvatar, setLoadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,15 +19,15 @@ export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoP
 
   const avatarSrc = useMemo(() => {
     return (
-      buildApiAssetUrl(currentUser.avatar_url) ??
+      buildApiAssetUrl(currentUser.avatarUrl) ??
       `https://picsum.photos/seed/${currentUser.username}/120/120`
     );
-  }, [currentUser.avatar_url, currentUser.username]);
+  }, [currentUser.avatarUrl, currentUser.username]);
 
   async function refreshProfile() {
     try {
       const member = await fetchProfile();
-      setDisplayName(member.display_name);
+      setDisplayName(member.displayName);
       onUserUpdated(member);
     } catch {
       // Keep existing UI state on refresh failure.
@@ -39,7 +39,7 @@ export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoP
     setError(null);
     setMessage(null);
     try {
-      const member = await saveProfile({ display_name: displayName });
+      const member = await saveProfile({ displayName });
       onUserUpdated(member);
       setMessage('昵称已更新');
     } catch (err) {
@@ -128,7 +128,7 @@ export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoP
       <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-2">
         <h2 className="text-lg font-semibold text-slate-900">登录信息</h2>
         <p className="text-sm text-slate-600">用户名：{currentUser.username}</p>
-        <p className="text-sm text-slate-600">最近登录：{currentUser.last_login_at ?? '暂无记录'}</p>
+        <p className="text-sm text-slate-600">最近登录：{currentUser.lastLoginAt ?? '暂无记录'}</p>
       </section>
 
       {message && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</div>}

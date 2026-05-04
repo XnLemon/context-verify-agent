@@ -9,9 +9,9 @@ interface SystemSettingsProps {
 }
 
 export default function SystemSettings({ currentUser, onUserUpdated }: SystemSettingsProps) {
-  const [themePreference, setThemePreference] = useState<ThemePreference>(currentUser.theme_preference ?? 'system');
-  const [fontScale, setFontScale] = useState<FontScale>(currentUser.font_scale ?? 'medium');
-  const [notifyEnabled, setNotifyEnabled] = useState<boolean>(currentUser.notify_enabled ?? true);
+  const [themePreference, setThemePreference] = useState<ThemePreference>(currentUser.themePreference ?? 'system');
+  const [fontScale, setFontScale] = useState<FontScale>(currentUser.fontScale ?? 'medium');
+  const [notifyEnabled, setNotifyEnabled] = useState<boolean>(currentUser.notifyEnabled ?? true);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,9 +19,9 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
   async function refresh() {
     try {
       const member = await fetchSystemSettings();
-      setThemePreference(member.theme_preference);
-      setFontScale(member.font_scale);
-      setNotifyEnabled(member.notify_enabled);
+      setThemePreference(member.themePreference);
+      setFontScale(member.fontScale);
+      setNotifyEnabled(member.notifyEnabled);
       onUserUpdated(member);
     } catch {
       // Ignore refresh failure and keep existing state.
@@ -34,9 +34,9 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
     setError(null);
     try {
       const member = await saveSystemSettings({
-        theme_preference: themePreference,
-        font_scale: fontScale,
-        notify_enabled: notifyEnabled,
+        themePreference,
+        fontScale,
+        notifyEnabled,
       });
       onUserUpdated(member);
       setMessage('系统设置已保存');

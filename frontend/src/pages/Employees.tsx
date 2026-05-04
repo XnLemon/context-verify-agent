@@ -50,9 +50,9 @@ export default function Employees() {
             {employees.map((item) => (
               <tr key={item.id}>
                 <td className="px-4 py-3 text-sm text-slate-700">{item.username}</td>
-                <td className="px-4 py-3 text-sm text-slate-700">{item.display_name}</td>
-                <td className="px-4 py-3 text-sm text-slate-700">{item.member_type}</td>
-                <td className="px-4 py-3 text-sm text-slate-700">{item.last_login_at ? new Date(item.last_login_at).toLocaleString() : '未登录'}</td>
+                <td className="px-4 py-3 text-sm text-slate-700">{item.displayName}</td>
+                <td className="px-4 py-3 text-sm text-slate-700">{item.memberType}</td>
+                <td className="px-4 py-3 text-sm text-slate-700">{item.lastLoginAt ? new Date(item.lastLoginAt).toLocaleString() : '未登录'}</td>
               </tr>
             ))}
           </tbody>

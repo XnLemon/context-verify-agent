@@ -138,7 +138,7 @@ export default function Dashboard({
 
     try {
       const response = await importWorkbenchContract(selectedFile as File, {
-        author: currentUser.display_name,
+        author: currentUser.displayName,
       });
       setUploadSuccess('上传成功，正在进入校审页面...');
       await loadData();
@@ -155,7 +155,7 @@ export default function Dashboard({
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex items-end justify-between gap-4">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{`欢迎回来，${currentUser.display_name}`}</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{`欢迎回来，${currentUser.displayName}`}</h1>
           <p className="text-slate-500 mt-1">
             当前共有 <span className="font-bold text-slate-900">{summary.totalContracts}</span> 份合同，其中
             <span className="text-red-500 font-bold"> {summary.highRiskCount} </span> 项高风险待处理。
@@ -344,7 +344,7 @@ export default function Dashboard({
 
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
                 <p className="text-slate-500">提交人</p>
-                <p className="text-slate-900 font-medium">{currentUser.display_name}</p>
+                <p className="text-slate-900 font-medium">{currentUser.displayName}</p>
               </div>
 
               <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm">

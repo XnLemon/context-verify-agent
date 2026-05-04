@@ -83,8 +83,8 @@ export async function login(username: string, password: string) {
     method: 'POST',
     body: JSON.stringify({
       username,
-      challenge_token: challenge.challenge_token,
-      password_proof: passwordProof,
+      challengeToken: challenge.challengeToken,
+      passwordProof,
     }),
   });
 }
