@@ -45,6 +45,7 @@ desktop.ini
 *.log
 
 # Local agent / workspace artifacts
+.claude/
 .codex/
 .agents/
 .run/
