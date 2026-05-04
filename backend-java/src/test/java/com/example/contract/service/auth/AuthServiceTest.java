@@ -1,6 +1,8 @@
 package com.example.contract.service.auth;
 
 import com.example.contract.config.AppProperties;
+import com.example.contract.dto.LoginChallengeResponse;
+import com.example.contract.dto.LoginResponse;
 import com.example.contract.exception.ApiException;
 import com.example.contract.model.Member;
 import com.example.contract.repository.AuthRepository;
@@ -73,17 +75,17 @@ class AuthServiceTest {
         ));
 
         AuthService service = new AuthService(repository, props);
-        Map<String, Object> challenge = service.issueChallenge("alice");
-        String nonce = String.valueOf(challenge.get("nonce"));
-        String challengeToken = String.valueOf(challenge.get("challenge_token"));
+        LoginChallengeResponse challenge = service.issueChallenge("alice");
+        String nonce = challenge.nonce();
+        String challengeToken = challenge.challengeToken();
         String proof = sha256(nonce + ":" + memberRow.passwordHash());
 
-        Map<String, Object> ok = service.login("alice", challengeToken, proof, "127.0.0.1", "junit");
-        assertNotNull(ok.get("token"));
+        LoginResponse ok = service.login("alice", challengeToken, proof, "127.0.0.1", "junit");
+        assertNotNull(ok.token());
 
-        Map<String, Object> challenge2 = service.issueChallenge("alice");
+        LoginChallengeResponse challenge2 = service.issueChallenge("alice");
         ApiException ex = assertThrows(ApiException.class,
-                () -> service.login("alice", String.valueOf(challenge2.get("challenge_token")), proof + "bad", "127.0.0.1", "junit"));
+                () -> service.login("alice", challenge2.challengeToken(), proof + "bad", "127.0.0.1", "junit"));
         assertEquals(401, ex.getStatus());
     }
 

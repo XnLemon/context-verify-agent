@@ -1,6 +1,7 @@
 package com.example.contract.service.workbench;
 
 import com.example.contract.config.AppProperties;
+import com.example.contract.dto.ReviewResultResponse;
 import com.example.contract.exception.ApiException;
 import com.example.contract.model.Member;
 import com.example.contract.repository.WorkbenchRepository;
@@ -69,6 +70,23 @@ class WorkbenchServiceTest {
     }
 
     @Test
+    void decideIssueApprovesContractWhenAllIssuesResolved() {
+        String contractId = "c-4";
+        String issueId = "iss-1";
+        Map<String, Object> review = reviewWithIssues(new ArrayList<>(List.of(issue(issueId, "pending"))));
+        when(repository.getContract(contractId)).thenReturn(Optional.of(contract(contractId)));
+        when(repository.getReview(contractId)).thenReturn(Optional.of(review), Optional.of(review));
+
+        ReviewResultResponse result = service.decideIssue(contractId, issueId,
+                Map.of("status", "accepted"), member);
+
+        assertNotNull(result);
+        ArgumentCaptor<Map<String, Object>> contractCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(repository).saveContract(contractCaptor.capture());
+        assertEquals("approved", contractCaptor.getValue().get("status"));
+    }
+
+    @Test
     void chatContractPreservesExistingIssueStatusesAndDefaultsNewToPending() {
         String contractId = "c-3";
         when(repository.getContract(contractId)).thenReturn(Optional.of(contract(contractId)));
@@ -87,26 +105,6 @@ class WorkbenchServiceTest {
         Map<String, Object> second = issuesCaptor.getValue().stream().filter(i -> "ruleB-20-2".equals(i.get("id"))).findFirst().orElseThrow();
         assertEquals("accepted", first.get("status"));
         assertEquals("pending", second.get("status"));
-    }
-
-    @Test
-    void decideIssueReturnsAutoRedraftFailureSemanticsWhenRedraftFails() {
-        String contractId = "c-4";
-        String issueId = "iss-1";
-        Map<String, Object> review = reviewWithIssues(new ArrayList<>(List.of(issue(issueId, "pending"))));
-        when(repository.getContract(contractId)).thenReturn(Optional.of(contract(contractId)));
-        when(repository.getReview(contractId)).thenReturn(Optional.of(review), Optional.of(review));
-        when(agentGateway.redraft(anyString(), anyString(), anyString(), anyList())).thenThrow(new RuntimeException("boom"));
-
-        Map<String, Object> result = service.decideIssue(contractId, issueId,
-                Map.of("status", "accepted", "auto_redraft", true), member);
-
-        Map<String, Object> autoRedraft = (Map<String, Object>) result.get("autoRedraft");
-        assertNotNull(autoRedraft);
-        assertEquals(true, autoRedraft.get("attempted"));
-        assertEquals(false, autoRedraft.get("succeeded"));
-        assertEquals("RuntimeException", autoRedraft.get("error"));
-        verify(repository).saveReview(anyString(), anyMap(), anyString(), anyList(), anyList(), anyList(), any());
     }
 
     @Test
