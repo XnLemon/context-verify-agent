@@ -8,6 +8,7 @@ import com.example.contract.repository.WorkbenchRepository;
 import com.example.contract.service.agent.AgentGateway;
 import com.example.contract.util.Jsons;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -20,11 +21,13 @@ public class WorkbenchService {
     private final WorkbenchRepository repository;
     private final AgentGateway agentGateway;
     private final AppProperties props;
+    private final TransactionTemplate transactionTemplate;
 
-    public WorkbenchService(WorkbenchRepository repository, AgentGateway agentGateway, AppProperties props) {
+    public WorkbenchService(WorkbenchRepository repository, AgentGateway agentGateway, AppProperties props, TransactionTemplate transactionTemplate) {
         this.repository = repository;
         this.agentGateway = agentGateway;
         this.props = props;
+        this.transactionTemplate = transactionTemplate;
     }
 
     public SummaryResponse summary(Member currentMember) {
@@ -250,30 +253,37 @@ public class WorkbenchService {
             assistant.put("trace_json", traceData);
         }
         messages.add(assistant);
-        repository.saveChatMessages(contractId, memberId, messages);
 
-        Object reviewObj = donePayload.get("review_result");
-        Map<String, Object> latestReview = null;
-        if (reviewObj instanceof Map<?, ?> reviewResult) {
-            Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, null);
-            saveStoredReview(stored);
-            contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
-            contract.put("updated_at", OffsetDateTime.now());
-            repository.saveContract(contract);
-            latestReview = toReviewResult(stored);
-        }
+        Map<String, Object> latestReview = new HashMap<>(1);
+        Map<String, Object> finalContract = contract;
+        List<Map<String, Object>> finalMessages = messages;
+        Map<String, Object> finalDonePayload = donePayload;
+        transactionTemplate.executeWithoutResult(status -> {
+            repository.saveChatMessages(contractId, memberId, finalMessages);
 
-        appendHistory(contractId, currentMember, "chat", "新增 AI 对话",
-                asString(messages.get(messages.size() - 2).get("content")),
-                Map.of("tool_used", asString(donePayload.get("tool_used"))));
+            Object reviewObj = finalDonePayload.get("review_result");
+            if (reviewObj instanceof Map<?, ?> reviewResult) {
+                Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, null);
+                saveStoredReview(stored);
+                finalContract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
+                finalContract.put("updated_at", OffsetDateTime.now());
+                repository.saveContract(finalContract);
+                latestReview.put("_val", toReviewResult(stored));
+            }
+
+            appendHistory(contractId, currentMember, "chat", "新增 AI 对话",
+                    asString(finalMessages.get(finalMessages.size() - 2).get("content")),
+                    Map.of("tool_used", asString(finalDonePayload.get("tool_used"))));
+        });
+        Map<String, Object> latestReviewResult = (Map<String, Object>) latestReview.get("_val");
 
         Map<String, Object> doneResult = new LinkedHashMap<>();
         doneResult.put("intent", asString(donePayload.getOrDefault("intent", "chat")));
         doneResult.put("toolUsed", asString(donePayload.getOrDefault("tool_used", "chat")));
         doneResult.put("assistantMessage", DTOConverter.toChatMessage(assistant));
         doneResult.put("messages", DTOConverter.toChatMessageList(messages));
-        if (latestReview != null) {
-            doneResult.put("latestReview", DTOConverter.toReview(latestReview));
+        if (latestReviewResult != null) {
+            doneResult.put("latestReview", DTOConverter.toReview(latestReviewResult));
         }
         // Forward trace to frontend (snake_case from Python → camelCase for JS)
         if (traceData != null) {

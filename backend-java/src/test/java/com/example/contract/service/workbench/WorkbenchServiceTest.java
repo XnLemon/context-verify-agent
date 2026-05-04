@@ -10,6 +10,9 @@ import com.example.contract.util.Jsons;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -32,7 +35,9 @@ class WorkbenchServiceTest {
     void setUp() {
         repository = mock(WorkbenchRepository.class);
         agentGateway = mock(AgentGateway.class);
-        service = new WorkbenchService(repository, agentGateway, new AppProperties());
+        PlatformTransactionManager ptm = mock(PlatformTransactionManager.class);
+        when(ptm.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+        service = new WorkbenchService(repository, agentGateway, new AppProperties(), new TransactionTemplate(ptm));
         member = new Member(1, "u1", "User One", "employee", "legal", true,
                 null, "system", "medium", true, OffsetDateTime.now(), null);
         when(repository.appendHistory(anyString(), anyInt(), anyMap())).thenReturn(1);
