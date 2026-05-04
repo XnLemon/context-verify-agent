@@ -37,5 +37,5 @@ app:
     rpc:
       provider: ${AGENT_RPC_PROVIDER:grpc}
       grpc-target: ${AGENT_GRPC_TARGET:127.0.0.1:50051}
-      timeout-millis: ${AGENT_RPC_TIMEOUT_MILLIS:15000}
-      stream-timeout-millis: ${AGENT_RPC_STREAM_TIMEOUT_MILLIS:30000}
+      timeout-millis: ${AGENT_RPC_TIMEOUT_MILLIS:120000}
+      stream-timeout-millis: ${AGENT_RPC_STREAM_TIMEOUT_MILLIS:300000}

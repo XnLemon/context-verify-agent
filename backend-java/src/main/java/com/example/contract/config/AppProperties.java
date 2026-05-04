@@ -26,8 +26,8 @@ public class AppProperties {
     public static class Rpc {
         private String provider = "grpc";
         private String grpcTarget = "127.0.0.1:50051";
-        private long timeoutMillis = 15000;
-        private long streamTimeoutMillis = 30000;
+        private long timeoutMillis = 120000;
+        private long streamTimeoutMillis = 300000;
 
         public String getProvider() { return provider; }
         public void setProvider(String provider) { this.provider = provider; }
