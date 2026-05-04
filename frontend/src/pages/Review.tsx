@@ -24,7 +24,7 @@ import {
   redraftWorkbenchContract,
   scanWorkbenchContract,
   updateWorkbenchContractContent,
-  sendWorkbenchChatMessage,
+  sendWorkbenchChatMessageStream,
   updateWorkbenchIssueStatus,
 } from '@/src/lib/api';
 import { canFinalizeContract, canUploadOrEditContract } from '@/src/lib/permissions';
@@ -59,6 +59,9 @@ export default function Review({
   const [error, setError] = useState<string | null>(null);
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingReasoning, setStreamingReasoning] = useState<string[]>([]);
+  const [streamingAssistantId, setStreamingAssistantId] = useState<string | null>(null);
   const [pendingIssueId, setPendingIssueId] = useState<string | null>(null);
   const [isApplyingIssueAction, setIsApplyingIssueAction] = useState(false);
   const [autoScanAttempted, setAutoScanAttempted] = useState(false);
@@ -71,7 +74,7 @@ export default function Review({
   const canFinalize = canFinalizeContract(currentUser);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [chatMessages]);
 
   useEffect(() => {
@@ -188,22 +191,63 @@ export default function Review({
       return;
     }
 
-    setIsSending(true);
+    const userContent = inputMessage.trim();
+    setInputMessage('');
     setError(null);
+    setIsSending(true);
+    setStreamingReasoning([]);
+
+    // 立即将用户消息添加到对话中
+    const tempId = 'temp-' + Date.now().toString(36);
+    const tempAiId = 'temp-ai-' + Date.now().toString(36);
+    setStreamingAssistantId(tempAiId);
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        role: 'user' as const,
+        content: userContent,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+      {
+        id: tempAiId,
+        role: 'assistant' as const,
+        content: '',
+        timestamp: '',
+      },
+    ]);
+    setIsStreaming(true);
+
     try {
-      const response = await sendWorkbenchChatMessage(contractId, inputMessage.trim());
-      const detail = await getWorkbenchContractDetail(contractId);
-      setInputMessage('');
+      const response = await sendWorkbenchChatMessageStream(contractId, userContent, {
+        onReasoning: (event) => {
+          setStreamingReasoning((prev) => [...prev, event.summary]);
+        },
+        onDelta: (event) => {
+          setChatMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === tempAiId ? { ...msg, content: msg.content + event.delta } : msg,
+            ),
+          );
+        },
+      });
+
+      // 流式完成，替换为服务端最终消息列表
       setChatMessages(response.messages);
       if (response.latestReview) {
         setLatestReview(response.latestReview);
       }
+      const detail = await getWorkbenchContractDetail(contractId);
       setContract(detail.contract);
       await refreshHistory(contractId);
     } catch (chatError) {
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== tempAiId));
       setError(chatError instanceof Error ? chatError.message : '发送消息失败。');
     } finally {
       setIsSending(false);
+      setIsStreaming(false);
+      setStreamingAssistantId(null);
+      setStreamingReasoning([]);
     }
   }
 
@@ -528,6 +572,19 @@ export default function Review({
                           msg.role === 'user' ? 'ml-auto items-end' : 'items-start',
                         )}
                       >
+                        {msg.id === streamingAssistantId && streamingReasoning.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {streamingReasoning.map((step, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-medium leading-relaxed"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                                {step.length > 28 ? step.slice(0, 28) + '…' : step}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <div
                           className={cn(
                             'p-4 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap',
@@ -536,7 +593,11 @@ export default function Review({
                               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none',
                           )}
                         >
-                          {msg.content}
+                          {msg.content || (msg.id === streamingAssistantId ? (
+                            <span className="text-slate-400 italic">
+                              {streamingReasoning.length > 0 ? '正在生成回答...' : '正在分析合同...'}
+                            </span>
+                          ) : null)}
                         </div>
                         <span className="text-[10px] text-slate-400 mt-1 px-1">{msg.timestamp}</span>
                       </div>
@@ -577,7 +638,8 @@ export default function Review({
                         }
                       }}
                       placeholder="向 AI 提问关于合同的任何问题..."
-                      className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none min-h-[100px]"
+                      disabled={isSending}
+                      className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none min-h-[100px] disabled:opacity-50"
                     />
                     <div className="absolute right-3 bottom-3 flex items-center gap-2">
                       <button className="p-1.5 text-slate-400 hover:text-slate-600">

@@ -18,6 +18,22 @@ public final class Jsons {
         }
     }
 
+    public static Map<String, Object> toMapSafe(String json, Map<String, Object> defaultValue) {
+        try {
+            return MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    public static Object parse(String json) {
+        try {
+            return MAPPER.readValue(json, Object.class);
+        } catch (Exception e) {
+            throw new RuntimeException("JSON parse failed: " + e.getMessage(), e);
+        }
+    }
+
     public static String toJson(Object value) {
         try {
             return MAPPER.writeValueAsString(value);

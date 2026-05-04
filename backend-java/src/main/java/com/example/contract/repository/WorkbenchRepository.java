@@ -107,8 +107,10 @@ public class WorkbenchRepository {
         }
         jdbc.update("delete from chat_messages where thread_id=?", threadId);
         for (Map<String, Object> m : messages) {
-            jdbc.update("insert into chat_messages(thread_id,contract_id,msg_id,role,content,timestamp,created_at) values (?, ?, ?, ?, ?, ?, ?)",
-                    threadId, contractId, m.get("id"), m.get("role"), m.get("content"), m.get("timestamp"), m.get("created_at"));
+            Object traceJson = m.get("trace_json");
+            String traceJsonStr = traceJson instanceof String s ? s : (traceJson != null ? Jsons.toJson(traceJson) : null);
+            jdbc.update("insert into chat_messages(thread_id,contract_id,msg_id,role,content,timestamp,created_at,trace_json) values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))",
+                    threadId, contractId, m.get("id"), m.get("role"), m.get("content"), m.get("timestamp"), m.get("created_at"), traceJsonStr);
         }
     }
 
@@ -165,6 +167,16 @@ public class WorkbenchRepository {
         out.put("content", rs.getString("content"));
         out.put("timestamp", rs.getString("timestamp"));
         out.put("created_at", rs.getObject("created_at", OffsetDateTime.class));
+        String traceJson = rs.getString("trace_json");
+        if (traceJson != null && !traceJson.isBlank()) {
+            // trace_json can be either a JSON object (legacy) or a JSON array (trace_summary list)
+            Object parsed = Jsons.parse(traceJson);
+            if (parsed instanceof Map<?, ?> map) {
+                out.put("trace_json", map);
+            } else if (parsed instanceof List<?> list) {
+                out.put("trace_json", list);
+            }
+        }
         return out;
     }
 

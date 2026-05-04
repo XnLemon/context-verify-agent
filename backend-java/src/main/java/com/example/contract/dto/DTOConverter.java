@@ -51,13 +51,20 @@ public final class DTOConverter {
         );
     }
 
+    @SuppressWarnings("unchecked")
     public static ChatMessageResponse toChatMessage(Map<String, Object> m) {
+        List<Map<String, Object>> trace = null;
+        Object traceObj = m.get("trace_json");
+        if (traceObj instanceof List<?> list && !list.isEmpty()) {
+            trace = (List<Map<String, Object>>) list;
+        }
         return new ChatMessageResponse(
                 asStr(m.get("id")),
                 asStr(m.get("role")),
                 asStr(m.get("content")),
                 asStr(m.get("timestamp")),
-                m.get("created_at") == null ? "" : m.get("created_at").toString()
+                m.get("created_at") == null ? "" : m.get("created_at").toString(),
+                trace
         );
     }
 

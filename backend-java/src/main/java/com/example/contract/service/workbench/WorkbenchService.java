@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Consumer;
 
 @Service
 public class WorkbenchService {
@@ -157,6 +158,10 @@ public class WorkbenchService {
         Map<String, Object> chat = agentGateway.chat(chatPayload);
 
         Map<String, Object> assistant = chatMessage("assistant", asString(chat.get("answer")));
+        Object traceData = chat.get("trace_summary");
+        if (traceData != null) {
+            assistant.put("trace_json", traceData);
+        }
         messages.add(assistant);
         repository.saveChatMessages(contractId, memberId, messages);
 
@@ -173,12 +178,108 @@ public class WorkbenchService {
 
         appendHistory(contractId, currentMember, "chat", "新增 AI 对话", asString(messages.get(messages.size() - 2).get("content")), Map.of("tool_used", asString(chat.get("tool_used"))));
         return new ChatResponse(
-                asStr(chat.getOrDefault("intent", "chat")),
-                asStr(chat.getOrDefault("tool_used", "chat")),
+                asString(chat.getOrDefault("intent", "chat")),
+                asString(chat.getOrDefault("tool_used", "chat")),
                 DTOConverter.toChatMessage(assistant),
                 DTOConverter.toChatMessageList(messages),
                 latestReview instanceof Map<?, ?> r ? DTOConverter.toReview((Map<String, Object>) r) : null
         );
+    }
+
+    public void chatContractStream(String contractId, Map<String, Object> payload, Member currentMember,
+                                    Consumer<AgentGateway.ChatStreamEvent> emitter) {
+        Map<String, Object> contract = requireContract(contractId, currentMember);
+        int memberId = memberScopeId(currentMember);
+        List<Map<String, Object>> messages = new ArrayList<>();
+        Object payloadMsgs = payload.get("messages");
+        if (payloadMsgs instanceof List<?> m && !m.isEmpty()) {
+            for (Object item : m) messages.add((Map<String, Object>) item);
+        } else {
+            messages.addAll(repository.getChatMessages(contractId, memberId));
+        }
+        String message = asString(payload.get("message"));
+        if (!message.isBlank()) {
+            messages.add(chatMessage("user", message));
+        }
+        if (messages.isEmpty()) {
+            throw new ApiException(400, "至少需要一条用户消息。");
+        }
+
+        Map<String, Object> chatPayload = new LinkedHashMap<>();
+        chatPayload.put("messages", messages.stream().map(m -> Map.of("role", m.get("role"), "content", m.get("content"))).toList());
+        chatPayload.put("contract_text", contract.get("content"));
+        chatPayload.put("contract_type", payload.getOrDefault("contract_type", contract.get("type")));
+        chatPayload.put("our_side", payload.getOrDefault("our_side", "甲方"));
+
+        emitter.accept(new AgentGateway.ChatStreamEvent("start", Jsons.toJson(Map.of("id", contractId, "timestamp", OffsetDateTime.now().toString()))));
+
+        Map<String, Object> donePayload = new LinkedHashMap<>();
+        StringBuilder deltaBuffer = new StringBuilder();
+        Iterator<AgentGateway.ChatStreamEvent> stream = agentGateway.chatStream(chatPayload);
+        while (stream.hasNext()) {
+            AgentGateway.ChatStreamEvent evt = stream.next();
+            if ("delta".equals(evt.event())) {
+                Map<String, Object> parsed = Jsons.toMapSafe(evt.dataJson(), null);
+                if (parsed != null) {
+                    deltaBuffer.append(parsed.getOrDefault("delta", ""));
+                }
+            } else if ("done".equals(evt.event())) {
+                donePayload = Jsons.toMapSafe(evt.dataJson(), null);
+                if (donePayload == null) {
+                    emitter.accept(new AgentGateway.ChatStreamEvent("error", Jsons.toJson(Map.of("error", "chat stream ended with malformed done event"))));
+                    return;
+                }
+                break;
+            }
+            emitter.accept(evt);
+        }
+
+        if (donePayload.isEmpty()) {
+            emitter.accept(new AgentGateway.ChatStreamEvent("error", Jsons.toJson(Map.of("error", "chat stream ended without done event"))));
+            return;
+        }
+
+        String answer = asString(donePayload.get("answer"));
+        if (!deltaBuffer.isEmpty() && answer.isEmpty()) {
+            answer = deltaBuffer.toString();
+        }
+        Object traceData = donePayload.get("trace_summary");
+        Map<String, Object> assistant = chatMessage("assistant", answer);
+        // Attach trace data to the assistant message for DB persistence
+        if (traceData != null) {
+            assistant.put("trace_json", traceData);
+        }
+        messages.add(assistant);
+        repository.saveChatMessages(contractId, memberId, messages);
+
+        Object reviewObj = donePayload.get("review_result");
+        Map<String, Object> latestReview = null;
+        if (reviewObj instanceof Map<?, ?> reviewResult) {
+            Map<String, Object> stored = buildStoredReview(contractId, (Map<String, Object>) reviewResult, null);
+            saveStoredReview(stored);
+            contract.put("status", deriveStatus((List<Map<String, Object>>) stored.get("issues")));
+            contract.put("updated_at", OffsetDateTime.now());
+            repository.saveContract(contract);
+            latestReview = toReviewResult(stored);
+        }
+
+        appendHistory(contractId, currentMember, "chat", "新增 AI 对话",
+                asString(messages.get(messages.size() - 2).get("content")),
+                Map.of("tool_used", asString(donePayload.get("tool_used"))));
+
+        Map<String, Object> doneResult = new LinkedHashMap<>();
+        doneResult.put("intent", asString(donePayload.getOrDefault("intent", "chat")));
+        doneResult.put("toolUsed", asString(donePayload.getOrDefault("tool_used", "chat")));
+        doneResult.put("assistantMessage", DTOConverter.toChatMessage(assistant));
+        doneResult.put("messages", DTOConverter.toChatMessageList(messages));
+        if (latestReview != null) {
+            doneResult.put("latestReview", DTOConverter.toReview(latestReview));
+        }
+        // Forward trace to frontend (snake_case from Python → camelCase for JS)
+        if (traceData != null) {
+            doneResult.put("traceSummary", traceData);
+        }
+        emitter.accept(new AgentGateway.ChatStreamEvent("done", Jsons.toJson(doneResult)));
     }
 
     public ReviewResultResponse decideIssue(String contractId, String issueId, Map<String, Object> payload, Member currentMember) {

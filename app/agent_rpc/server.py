@@ -104,6 +104,11 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
                 event="error",
                 data_json=json.dumps({"error": str(exc)}, ensure_ascii=False),
             )
+        except Exception as exc:
+            yield agent_pb2.ChatStreamResponse(
+                event="error",
+                data_json=json.dumps({"error": f"chat stream internal error: {exc}"}, ensure_ascii=False),
+            )
 
     def Redraft(self, request, context):
         try:
@@ -129,10 +134,16 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
 
 
 def serve() -> None:
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=16))
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=16),
+        options=[
+            ("grpc.max_send_message_length", 10 * 1024 * 1024),
+            ("grpc.max_receive_message_length", 10 * 1024 * 1024),
+        ],
+    )
     agent_pb2_grpc.add_AgentRpcServiceServicer_to_server(AgentRpcServicer(), server)
     port = int(os.getenv("AGENT_GRPC_PORT", "50051"))
-    server.add_insecure_port(f"[::]:{port}")
+    server.add_insecure_port(f"0.0.0.0:{port}")
     server.start()
     server.wait_for_termination()
 

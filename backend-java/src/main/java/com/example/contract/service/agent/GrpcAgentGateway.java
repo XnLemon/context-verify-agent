@@ -6,6 +6,7 @@ import com.example.contract.util.Jsons;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -24,7 +25,10 @@ public class GrpcAgentGateway implements AgentGateway {
     private final long streamTimeoutMillis;
 
     public GrpcAgentGateway(String target, long timeoutMillis, long streamTimeoutMillis) {
-        this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+        this.channel = ManagedChannelBuilder.forTarget(target)
+                .usePlaintext()
+                .maxInboundMessageSize(10 * 1024 * 1024)
+                .build();
         this.stub = AgentRpcServiceGrpc.newBlockingStub(channel);
         this.timeoutMillis = timeoutMillis;
         this.streamTimeoutMillis = streamTimeoutMillis;
@@ -105,12 +109,21 @@ public class GrpcAgentGateway implements AgentGateway {
         channel.shutdown();
     }
 
+    private String resolveErrorMessage(StatusRuntimeException ex) {
+        Status code = ex.getStatus();
+        String desc = code.getDescription();
+        if (desc != null && (desc.contains("Connection refused") || desc.contains("io exception") || desc.contains("UNAVAILABLE"))) {
+            return "Agent 服务未连接，请确保 Python agent 已启动（默认端口 50051），或设置 AGENT_RPC_PROVIDER=custom 跳过 AI 服务。";
+        }
+        return "Agent RPC 调用失败: " + (desc != null ? desc : code.getCode().name());
+    }
+
     private JsonResponse call(RpcCall call) {
         try {
             return call.exec();
         } catch (StatusRuntimeException ex) {
             log.error("gRPC call failed: status={}, description={}", ex.getStatus().getCode(), ex.getStatus().getDescription(), ex);
-            throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
+            throw new ApiException(503, resolveErrorMessage(ex));
         }
     }
 
@@ -118,7 +131,7 @@ public class GrpcAgentGateway implements AgentGateway {
         try {
             return call.exec();
         } catch (StatusRuntimeException ex) {
-            throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
+            throw new ApiException(503, resolveErrorMessage(ex));
         }
     }
 
@@ -126,7 +139,7 @@ public class GrpcAgentGateway implements AgentGateway {
         try {
             return call.exec();
         } catch (StatusRuntimeException ex) {
-            throw new ApiException(503, "Agent RPC call failed: " + ex.getStatus().getDescription());
+            throw new ApiException(503, resolveErrorMessage(ex));
         }
     }
 

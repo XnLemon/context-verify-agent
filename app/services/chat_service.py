@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -29,6 +31,19 @@ from app.services.react_runtime import (
     references_to_search_results,
 )
 from app.services.review_service import ReviewService
+
+
+# Dedicated trace logger: writes ReAct reasoning traces to a separate file
+_trace_logger = logging.getLogger("chat_trace")
+_trace_handler = logging.FileHandler(
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".run", "chat_trace.log"),
+    encoding="utf-8",
+    delay=True,
+)
+_trace_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+_trace_logger.addHandler(_trace_handler)
+_trace_logger.setLevel(logging.INFO)
+_trace_logger.propagate = False
 
 
 class ChatService:
@@ -138,6 +153,7 @@ class ChatService:
                 action_input = {"query": query}
             final_answer_candidate = str(plan.get("final_answer") or "").strip()
 
+            _trace_logger.info("STEP=%d | THOUGHT=%s | ACTION=%s | INPUT=%s", step, thought, action, json.dumps(action_input, ensure_ascii=False))
             yield {"event": "reasoning", "data": {"step": step, "summary": thought}}
 
             if action == "finish":
@@ -182,6 +198,14 @@ class ChatService:
                 trace_steps=trace_steps,
                 references=collected_references,
             )
+
+        # Log ReAct trace to dedicated file for post-hoc review
+        _trace_logger.info(
+            "INTENT=%s | QUERY=%s | TRACE=%s",
+            intent,
+            query[:120],
+            json.dumps([s.to_summary_dict() for s in trace_steps], ensure_ascii=False),
+        )
 
         answer = ""
         stream_started_at = time.monotonic()
