@@ -79,3 +79,82 @@ html[data-theme='dark'] .text-slate-500,
 html[data-theme='dark'] .text-slate-400 {
   color: #94a3b8 !important;
 }
+
+.rich-doc-content h1,
+.rich-doc-content h2,
+.rich-doc-content h3,
+.rich-doc-content h4 {
+  @apply text-slate-900 font-bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.rich-doc-content h1 { @apply text-3xl; }
+.rich-doc-content h2 { @apply text-2xl; }
+.rich-doc-content h3 { @apply text-xl; }
+.rich-doc-content p {
+  @apply text-slate-800 leading-relaxed mb-4;
+}
+.rich-doc-content strong {
+  @apply text-slate-900 font-bold;
+}
+.rich-doc-content table {
+  @apply w-full border-collapse mb-4;
+}
+.rich-doc-content th {
+  @apply border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 font-semibold;
+}
+.rich-doc-content td {
+  @apply border border-slate-200 px-3 py-2 text-slate-800;
+}
+.rich-doc-content ul,
+.rich-doc-content ol {
+  @apply text-slate-800 mb-4 pl-6;
+}
+.rich-doc-content li {
+  @apply mb-1;
+}
+
+/* TipTap rich text editor styles */
+.tiptap-editor .ProseMirror {
+  @apply outline-none min-h-[300px] text-slate-800 leading-relaxed;
+}
+.tiptap-editor .ProseMirror p {
+  @apply mb-3;
+}
+.tiptap-editor .ProseMirror h1 {
+  @apply text-2xl font-bold mb-4 text-slate-900;
+}
+.tiptap-editor .ProseMirror h2 {
+  @apply text-xl font-bold mb-3 mt-6 text-slate-900;
+}
+.tiptap-editor .ProseMirror h3 {
+  @apply text-lg font-bold mb-2 mt-4 text-slate-900;
+}
+.tiptap-editor .ProseMirror strong {
+  @apply font-bold text-slate-900;
+}
+.tiptap-editor .ProseMirror ul {
+  @apply list-disc pl-6 mb-3;
+}
+.tiptap-editor .ProseMirror ol {
+  @apply list-decimal pl-6 mb-3;
+}
+.tiptap-editor .ProseMirror li {
+  @apply mb-1;
+}
+.tiptap-editor .ProseMirror table {
+  @apply w-full border-collapse mb-4;
+}
+.tiptap-editor .ProseMirror th {
+  @apply border border-slate-300 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-700;
+}
+.tiptap-editor .ProseMirror td {
+  @apply border border-slate-300 px-3 py-2 text-slate-800;
+}
+.tiptap-editor .ProseMirror table .selectedCell {
+  @apply bg-blue-50;
+}
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-slate-400 pointer-events-none float-left h-0;
+  content: attr(data-placeholder);
+}

@@ -16,6 +16,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import DOMPurify from 'dompurify';
+const RichTextEditor = React.lazy(() => import('@/src/components/RichTextEditor'));
 
 import {
   finalizeWorkbenchContract,
@@ -67,6 +69,7 @@ export default function Review({
   const [autoScanAttempted, setAutoScanAttempted] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [draftContent, setDraftContent] = useState('');
+  const [editKey, setEditKey] = useState(0);
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -257,15 +260,11 @@ export default function Review({
       return;
     }
     setDraftContent(contract.content);
+    setEditKey((prev) => prev + 1);
     setIsEditingContent(true);
   }
 
   function handleCancelEdit() {
-    if (!contract) {
-      setIsEditingContent(false);
-      return;
-    }
-    setDraftContent(contract.content);
     setIsEditingContent(false);
   }
 
@@ -418,13 +417,16 @@ export default function Review({
           <div className="w-full max-w-4xl bg-white shadow-xl shadow-slate-200/50 border border-slate-200 rounded-lg h-[min(100vh-9rem,960px)] min-h-[560px] p-8 md:p-12 font-serif leading-relaxed text-slate-800">
             {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
                         {isEditingContent ? (
-              <div className="h-full flex flex-col gap-3">
-                <div className="text-xs text-slate-500">你可以手动编辑合同正文，保存后会同步到系统并记录操作历史。</div>
-                <textarea
-                  value={draftContent}
-                  onChange={(event) => setDraftContent(event.target.value)}
-                  className="flex-1 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-7 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
+              <div className="h-full flex flex-col">
+                <EditorErrorBoundary key={editKey}>
+                  <React.Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 bg-white animate-pulse" />}>
+                    <RichTextEditor
+                      content={contract.content}
+                      onChange={setDraftContent}
+                      placeholder="请输入合同正文..."
+                    />
+                  </React.Suspense>
+                </EditorErrorBoundary>
               </div>
             ) : (
               <DocumentContent content={contract.content} />
@@ -685,7 +687,23 @@ export default function Review({
   );
 }
 
+function isHtmlContent(content: string): boolean {
+  return /^\s*<(?:h[1-6]|p|ul|ol|li|table|div|br|strong|em|blockquote)\b/i.test(content.trim());
+}
+
 function DocumentContent({ content }: { content: string }) {
+  if (isHtmlContent(content)) {
+    const sanitized = DOMPurify.sanitize(content);
+    return (
+      <div className="h-full overflow-auto rich-doc-content">
+        <div dangerouslySetInnerHTML={{ __html: sanitized }} />
+      </div>
+    );
+  }
+  return <PaginatedPlainText content={content} />;
+}
+
+function PaginatedPlainText({ content }: { content: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 900, height: 700 });
   const [page, setPage] = useState(1);
@@ -850,6 +868,35 @@ function DocumentContent({ content }: { content: string }) {
       </div>
     </div>
   );
+}
+
+class EditorErrorBoundary extends React.Component<
+  { children: React.ReactNode; onRetry?: () => void },
+  { hasError: boolean; error: Error | null }
+> {
+  override state = { hasError: false, error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  override render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+          <p className="text-red-600 font-bold mb-2">编辑器加载失败</p>
+          <p className="text-sm text-slate-500 mb-4">{this.state.error?.message ?? '未知错误'}</p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            重试
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function EmptyState({ onBack, message }: { onBack: () => void; message: string }) {
