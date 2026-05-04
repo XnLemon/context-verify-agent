@@ -7,6 +7,7 @@ from pathlib import Path
 
 from docx import Document
 from pypdf import PdfReader
+from mammoth import convert_to_html as mammoth_to_html
 
 from app.schemas.document import DocumentMetadata, DocumentSpan, ParsedDocument
 from app.services.chunker import ContractChunker
@@ -41,7 +42,13 @@ class ContractParser:
         else:
             raw_text, spans = self._parse_pdf_bytes(content)
 
-        return self._build_document(file_name, source_path or file_name, suffix, raw_text, spans)
+        document = self._build_document(file_name, source_path or file_name, suffix, raw_text, spans)
+
+        # Generate rich HTML for .docx files (headings, bold, tables, lists, etc.)
+        if suffix == ".docx":
+            document.html_content = self._docx_to_html(content)
+
+        return document
 
     def parse_text(self, text: str, source_name: str = "inline.txt") -> ParsedDocument:
         raw_text, spans = self._build_spans_from_blocks(text.splitlines(), page_no=1)
@@ -170,6 +177,13 @@ class ContractParser:
         if "服务" in text:
             return "服务合同"
         return None
+
+    def _docx_to_html(self, content: bytes) -> str:
+        """Convert .docx to HTML using mammoth, preserving headings, bold, tables, lists, etc."""
+        result = mammoth_to_html(BytesIO(content))
+        if result.value:
+            return result.value.strip()
+        return ""
 
     def _doc_id(self, source: str) -> str:
         digest = hashlib.md5(source.encode("utf-8")).hexdigest()[:12]

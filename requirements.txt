@@ -14,3 +14,4 @@ sqlalchemy==2.0.43
 alembic==1.16.5
 grpcio==1.66.2
 grpcio-tools==1.66.2
+mammoth==1.12.0

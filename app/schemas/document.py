@@ -42,6 +42,7 @@ class ParsedDocument(BaseModel):
     raw_text: str
     spans: list[DocumentSpan] = Field(default_factory=list)
     clause_chunks: list[ClauseChunk] = Field(default_factory=list)
+    html_content: str = Field(default="", description="Rich HTML representation (for .docx files via mammoth)")
 
 
 class ParseResponse(BaseModel):
