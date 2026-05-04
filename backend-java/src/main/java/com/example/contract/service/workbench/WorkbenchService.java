@@ -91,6 +91,8 @@ public class WorkbenchService {
         Map<String, Object> document = (Map<String, Object>) parsed.get("document");
         Map<String, Object> metadata = (Map<String, Object>) document.get("metadata");
         String rawText = String.valueOf(document.getOrDefault("raw_text", ""));
+        // Use html_content for .docx files (rich formatting), fall back to raw_text for .txt/.pdf
+        String contractContent = String.valueOf(document.getOrDefault("html_content", rawText));
         String title = asString(metadata.get("title"));
         if (title.isBlank()) {
             title = stripSuffix(fileName);
@@ -100,7 +102,7 @@ public class WorkbenchService {
             type = props.getDefaultContractType();
         }
         String id = "contract-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        repository.createContract(title, type, "pending", author, ownerUsername, rawText, fileName, id);
+        repository.createContract(title, type, "pending", author, ownerUsername, contractContent, fileName, id);
         appendHistory(id, currentMember, "import", "导入合同", "已从文件 " + fileName + " 导入合同。", Map.of("file_name", fileName));
         return new ImportContractResponse(DTOConverter.toContract(requireContract(id, currentMember)));
     }
