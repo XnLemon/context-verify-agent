@@ -30,9 +30,9 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--app-bg)' }}>
       {/* Top brand bar */}
-      <div className="bg-gradient-to-r from-[#1e40af] to-[#2563eb] px-10 py-3.5 flex items-center gap-3">
+      <div className="bg-gradient-to-r from-brand-700 to-brand-600 px-10 py-3.5 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold text-sm">
           S
         </div>
@@ -54,7 +54,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className="flex items-center gap-20 relative z-10">
           {/* Brand text */}
           <div className="hidden lg:block max-w-xs">
-            <h2 className="text-3xl font-bold text-[#0f172a] leading-tight mb-3">
+            <h2 className="text-3xl font-bold text-text-primary leading-tight mb-3">
               智能合同<br />
               <span className="text-brand-600">校审管理平台</span>
             </h2>
@@ -107,7 +107,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       </div>
 
       {/* Bottom bar */}
-      <div className="bg-[#1e293b] px-10 py-3 flex items-center justify-between">
+      <div className="bg-sidebar px-10 py-3 flex items-center justify-between">
         <span className="text-xs text-text-muted">© 2026 SmartAudit. All rights reserved.</span>
       </div>
     </div>

@@ -162,7 +162,7 @@ export default function App() {
     <div className="flex h-screen font-sans" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
       <Sidebar
         currentUser={currentUser}
-        currentPage={currentPage as ListPage}
+        currentPage={currentPage}
         expanded={sidebarExpanded}
         onNavigate={navigateToList}
         onLogout={logout}

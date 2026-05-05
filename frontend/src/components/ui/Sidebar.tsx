@@ -17,7 +17,7 @@ interface NavItem {
 
 interface SidebarProps {
   currentUser: UserMember;
-  currentPage: ListPage;
+  currentPage: ListPage | 'review';
   expanded: boolean;
   onNavigate: (page: ListPage) => void;
   onLogout: () => void;
