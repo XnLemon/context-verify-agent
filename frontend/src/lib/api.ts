@@ -1,6 +1,8 @@
 ﻿import type {
   AuditIssueStatus,
   ChatResponse,
+  ClauseRequest,
+  ClauseResponse,
   Contract,
   ContractDetailResponse,
   ContractListResponse,
@@ -15,6 +17,9 @@
   RedraftResponse,
   ScanResponse,
   SummaryStats,
+  TemplateRequest,
+  TemplateResponse,
+  TemplateTag,
   UpdateProfileRequest,
   UpdateSettingsRequest,
   UserMember,
@@ -447,4 +452,89 @@ export function importWorkbenchContract(
   });
 }
 
+// === Template Tags ===
+export function listTags(): Promise<TemplateTag[]> {
+  return request<TemplateTag[]>('/api/tags');
+}
 
+export function createTag(name: string, color: string): Promise<TemplateTag> {
+  return request<TemplateTag>('/api/tags', {
+    method: 'POST',
+    body: JSON.stringify({ name, color }),
+  });
+}
+
+export function updateTag(id: number, name: string, color: string): Promise<TemplateTag> {
+  return request<TemplateTag>(`/api/tags/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name, color }),
+  });
+}
+
+export function deleteTag(id: number): Promise<void> {
+  return request<void>(`/api/tags/${id}`, { method: 'DELETE' });
+}
+
+// === Templates ===
+export function listTemplates(params?: { search?: string; tagIds?: number[]; page?: number; size?: number }): Promise<TemplateResponse[]> {
+  const q = new URLSearchParams();
+  if (params?.search) q.set('search', params.search);
+  if (params?.tagIds?.length) q.set('tagIds', params.tagIds.join(','));
+  if (params?.page) q.set('page', String(params.page));
+  if (params?.size) q.set('size', String(params.size));
+  return request<TemplateResponse[]>(`/api/templates?${q}`);
+}
+
+export function getTemplate(id: string): Promise<TemplateResponse> {
+  return request<TemplateResponse>(`/api/templates/${id}`);
+}
+
+export function createTemplate(data: TemplateRequest): Promise<TemplateResponse> {
+  return request<TemplateResponse>('/api/templates', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateTemplate(id: string, data: TemplateRequest): Promise<TemplateResponse> {
+  return request<TemplateResponse>(`/api/templates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteTemplate(id: string): Promise<void> {
+  return request<void>(`/api/templates/${id}`, { method: 'DELETE' });
+}
+
+// === Clauses ===
+export function listClauses(params?: { search?: string; tagIds?: number[]; page?: number; size?: number }): Promise<ClauseResponse[]> {
+  const q = new URLSearchParams();
+  if (params?.search) q.set('search', params.search);
+  if (params?.tagIds?.length) q.set('tagIds', params.tagIds.join(','));
+  if (params?.page) q.set('page', String(params.page));
+  if (params?.size) q.set('size', String(params.size));
+  return request<ClauseResponse[]>(`/api/clauses?${q}`);
+}
+
+export function getClause(id: string): Promise<ClauseResponse> {
+  return request<ClauseResponse>(`/api/clauses/${id}`);
+}
+
+export function createClause(data: ClauseRequest): Promise<ClauseResponse> {
+  return request<ClauseResponse>('/api/clauses', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateClause(id: string, data: ClauseRequest): Promise<ClauseResponse> {
+  return request<ClauseResponse>(`/api/clauses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteClause(id: string): Promise<void> {
+  return request<void>(`/api/clauses/${id}`, { method: 'DELETE' });
+}
