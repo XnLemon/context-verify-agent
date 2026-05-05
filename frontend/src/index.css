@@ -47,42 +47,44 @@
 }
 
 @layer base {
-  :root {
-    --app-bg: #f8fafc;
-    --app-text: #0f172a;
-    --app-font-scale: 1;
-  }
-
-  html[data-theme='dark'] {
-    --app-bg: #0b1220;
-    --app-text: #e2e8f0;
-    --color-brand-50: #1e3a5f;
-    --color-surface: #0f172a;
-    --color-surface-subtle: #1e293b;
-    --color-sidebar: #020617;
-    --color-text-primary: #e2e8f0;
-    --color-text-secondary: #94a3b8;
-    --color-text-muted: #64748b;
-    --color-text-sidebar: #64748b;
-    --color-text-sidebar-active: #ffffff;
-    --color-border: #334155;
-    --color-border-light: #1e293b;
-    --color-success: #4ade80;
-    --color-warning: #fbbf24;
-    --color-danger: #f87171;
-    --color-info: #60a5fa;
-  }
-
-  html[data-font-scale='small'] { --app-font-scale: 0.93; }
-  html[data-font-scale='medium'] { --app-font-scale: 1; }
-  html[data-font-scale='large'] { --app-font-scale: 1.08; }
-
   body {
     background: var(--app-bg);
     color: var(--app-text);
     font-size: calc(16px * var(--app-font-scale));
   }
 }
+
+/* Base variables (unlayered to override @theme in all browsers including Safari) */
+:root {
+  --app-bg: #f8fafc;
+  --app-text: #0f172a;
+  --app-font-scale: 1;
+}
+
+:root[data-theme='dark'] {
+  --app-bg: #0b1220;
+  --app-text: #e2e8f0;
+  --color-brand-50: #1e3a5f;
+  --color-surface: #0f172a;
+  --color-surface-subtle: #1e293b;
+  --color-sidebar: #020617;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-sidebar: #64748b;
+  --color-text-sidebar-active: #ffffff;
+  --color-border: #334155;
+  --color-border-light: #1e293b;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+}
+
+/* Font scale */
+:root[data-font-scale='small'] { --app-font-scale: 0.93; }
+:root[data-font-scale='medium'] { --app-font-scale: 1; }
+:root[data-font-scale='large'] { --app-font-scale: 1.08; }
 
 /* Dark mode overrides removed — components reference CSS variables directly */
 
