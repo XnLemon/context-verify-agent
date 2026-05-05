@@ -48,6 +48,8 @@ class PipelineOrchestrator:
         initial_input: dict[str, Any],
         on_event: Callable[[PipelineEvent], None] | None = None,
     ) -> PipelineState:
+        if state.status in (PipelineStatus.FAILED, PipelineStatus.CANCELLED, PipelineStatus.INTERRUPTED):
+            return state
         state.status = PipelineStatus.RUNNING
         self._emit(on_event, self._event(state, "pipeline_started"))
 
