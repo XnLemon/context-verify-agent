@@ -5,6 +5,7 @@ import { clearAuthSession, getAuthSession, updateAuthSessionMember } from '@/src
 import { applyFontScale, applyThemePreference, resolveTheme } from '@/src/lib/preferences';
 import Sidebar, { type ListPage } from '@/src/components/ui/Sidebar';
 import Header from '@/src/components/ui/Header';
+import { ToastProvider } from '@/src/components/ui/Toast';
 import type { UserMember } from '@/src/types';
 import AddEmployee from './pages/AddEmployee';
 import ContractLibrary from './pages/ContractLibrary';
@@ -157,8 +158,9 @@ export default function App() {
   }
 
   return (
+    <ToastProvider>
     <div className="flex h-screen font-sans" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
-<      <Sidebar
+      <Sidebar
         currentUser={currentUser}
         currentPage={currentPage as ListPage}
         expanded={sidebarExpanded}
@@ -173,6 +175,7 @@ export default function App() {
           onSearchChange={setSearchQuery}
           onToggleSidebar={() => setSidebarExpanded((prev) => !prev)}
           onProfileClick={() => navigateToList('profile-info')}
+          sidebarExpanded={sidebarExpanded}
         />
 
         <div className="flex-1 overflow-auto">
@@ -200,6 +203,7 @@ export default function App() {
         </div>
       </main>
     </div>
+    </ToastProvider>
   );
 }
 

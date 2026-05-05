@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, AlertCircle, Info, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
@@ -38,10 +38,17 @@ const styles: Record<ToastType, string> = {
 };
 
 const MAX_VISIBLE = 3;
+const AUTO_DISMISS_MS = 3000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(0);
+  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    const timeouts = timeoutsRef.current;
+    return () => timeouts.forEach(clearTimeout);
+  }, []);
 
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = nextId.current++;
@@ -49,9 +56,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const next = [...prev, { id, type, message }];
       return next.slice(-MAX_VISIBLE);
     });
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      timeoutsRef.current.delete(timeoutId);
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+    }, AUTO_DISMISS_MS);
+    timeoutsRef.current.add(timeoutId);
   }, []);
 
   const removeToast = useCallback((id: number) => {
@@ -66,6 +75,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           {toasts.map((t) => (
             <motion.div
               key={t.id}
+              role="alert"
+              aria-live="assertive"
               initial={{ opacity: 0, x: 80, scale: 0.95 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 80, scale: 0.95 }}
@@ -77,7 +88,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               {icons[t.type]}
               <span className="flex-1">{t.message}</span>
-              <button onClick={() => removeToast(t.id)} className="opacity-70 hover:opacity-100 transition-opacity">
+              <button type="button" onClick={() => removeToast(t.id)} className="opacity-70 hover:opacity-100 transition-opacity">
                 <X size={16} />
               </button>
             </motion.div>

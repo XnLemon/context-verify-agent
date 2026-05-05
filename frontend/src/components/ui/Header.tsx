@@ -9,6 +9,7 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onToggleSidebar: () => void;
   onProfileClick: () => void;
+  sidebarExpanded?: boolean;
 }
 
 export default function Header({
@@ -17,11 +18,16 @@ export default function Header({
   onSearchChange,
   onToggleSidebar,
   onProfileClick,
+  sidebarExpanded,
 }: HeaderProps) {
   return (
     <header className="h-16 bg-surface border-b border-border-light flex items-center gap-4 px-5 shrink-0">
       <button
+        type="button"
         onClick={onToggleSidebar}
+        aria-label={sidebarExpanded ? '收起侧边栏' : '展开侧边栏'}
+        aria-expanded={sidebarExpanded}
+        aria-controls="sidebar"
         className="w-9 h-9 rounded-md flex items-center justify-center text-text-muted hover:bg-surface-subtle hover:text-text-primary transition-colors"
       >
         <Menu size={20} />
@@ -34,12 +40,13 @@ export default function Header({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="搜索合同、类型或提交人..."
+          aria-label="搜索合同"
           className="w-full pl-9 pr-4 h-9 bg-surface-subtle border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
         />
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <button className="relative w-9 h-9 rounded-md flex items-center justify-center text-text-muted hover:bg-surface-subtle hover:text-text-primary transition-colors">
+        <button type="button" aria-label="通知" className="relative w-9 h-9 rounded-md flex items-center justify-center text-text-muted hover:bg-surface-subtle hover:text-text-primary transition-colors">
           <Bell size={18} />
           <span className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full border-2 border-surface" />
         </button>

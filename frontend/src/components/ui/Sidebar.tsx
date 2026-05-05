@@ -1,12 +1,12 @@
 import {
-  LayoutDashboard, FileText, CheckCircle2, AlertCircle, Clock,
+  LayoutDashboard, FileText, CheckCircle2, AlertCircle, Clock, LayoutTemplate,
   Users, UserPlus, Settings, LogOut, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import type { UserMember } from '@/src/types';
 
 export type ListPage =
-  | 'dashboard' | 'library' | 'reviewed' | 'alerts' | 'pending'
+  | 'dashboard' | 'library' | 'reviewed' | 'alerts' | 'pending' | 'templates'
   | 'employees' | 'add-employee' | 'system-settings' | 'profile-info';
 
 interface NavItem {
@@ -29,6 +29,7 @@ const mainNav: NavItem[] = [
   { key: 'reviewed', icon: <CheckCircle2 size={20} />, label: '已审核' },
   { key: 'alerts', icon: <AlertCircle size={20} />, label: '风险预警' },
   { key: 'pending', icon: <Clock size={20} />, label: '待处理' },
+  { key: 'templates', icon: <LayoutTemplate size={20} />, label: '公司模板' },
 ];
 
 const adminNav: NavItem[] = [
@@ -45,6 +46,7 @@ export default function Sidebar({ currentUser, currentPage, expanded, onNavigate
 
   return (
     <aside
+      id="sidebar"
       className={cn(
         'bg-sidebar flex flex-col shrink-0 transition-all duration-200',
         expanded ? 'w-[200px]' : 'w-[60px]',
@@ -59,7 +61,7 @@ export default function Sidebar({ currentUser, currentPage, expanded, onNavigate
       </div>
 
       {/* Main nav */}
-      <nav className="flex-1 px-2 space-y-0.5">
+      <nav aria-label="主导航" className="flex-1 px-2 space-y-0.5">
         {mainNav.map((item) => (
           <SidebarItem
             key={item.key}
@@ -93,7 +95,7 @@ export default function Sidebar({ currentUser, currentPage, expanded, onNavigate
       </nav>
 
       {/* Bottom nav */}
-      <div className="px-2 pb-3 space-y-0.5">
+      <nav aria-label="底部导航" className="px-2 pb-3 space-y-0.5">
         {bottomNav.map((item) => (
           <SidebarItem
             key={item.key}
@@ -111,7 +113,7 @@ export default function Sidebar({ currentUser, currentPage, expanded, onNavigate
           expanded={expanded}
           onClick={onLogout}
         />
-      </div>
+      </nav>
     </aside>
   );
 }
@@ -131,7 +133,9 @@ function SidebarItem({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={cn(
         'w-full flex items-center gap-3 rounded-md transition-all text-sm',
         expanded ? 'px-3 py-2.5' : 'justify-center py-2.5',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/src/lib/utils';
 
 interface AvatarProps {
@@ -16,6 +16,11 @@ function getInitials(name: string): string {
 
 export default function Avatar({ src, name, size = 'md', className }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
+
   const showImage = src && !imgError;
 
   return (
