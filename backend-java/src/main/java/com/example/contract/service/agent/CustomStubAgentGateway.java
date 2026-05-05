@@ -77,6 +77,11 @@ public class CustomStubAgentGateway implements AgentGateway {
         return contractText + "\n\n[custom adapter stub redraft]";
     }
 
+    @Override
+    public Map<String, Object> embedDocument(String text, String docId, String sourceType, String title) {
+        return Map.of("status", "ok", "doc_id", docId);
+    }
+
     private Map<String, Object> reviewLike(String text, String contractType) {
         if (text == null || text.isBlank()) {
             throw new ApiException(400, "合同正文不能为空");
