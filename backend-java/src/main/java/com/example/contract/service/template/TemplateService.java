@@ -9,11 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -56,15 +58,16 @@ public class TemplateService {
     // === Templates ===
     public List<TemplateResponse> listTemplates(String search, List<Integer> tagIds, int page, int size) {
         int offset = (page - 1) * size;
+        Map<Integer, TemplateTag> tagMap = loadTagMap();
         return templateRepo.list(search, tagIds, offset, size).stream()
-                .map(this::toTemplateResponse)
+                .map(t -> toTemplateResponse(t, tagMap))
                 .toList();
     }
 
     public TemplateResponse getTemplate(String id) {
         CompanyTemplate t = templateRepo.getById(id)
                 .orElseThrow(() -> new ApiException(404, "模板不存在"));
-        return toTemplateResponse(t);
+        return toTemplateResponse(t, loadTagMap());
     }
 
     @Transactional
@@ -73,8 +76,13 @@ public class TemplateService {
         CompanyTemplate t = new CompanyTemplate(id, req.name(), req.description(), req.content(), req.tags(),
                 memberId, memberId, null, null, false);
         templateRepo.insert(t);
-        syncEmbedding(req.content(), id, "template", req.name());
-        return toTemplateResponse(t);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                syncEmbedding(req.content(), id, "template", req.name());
+            }
+        });
+        return toTemplateResponse(t, loadTagMap());
     }
 
     @Transactional
@@ -84,8 +92,13 @@ public class TemplateService {
         CompanyTemplate updated = new CompanyTemplate(id, req.name(), req.description(), req.content(), req.tags(),
                 existing.createdBy(), memberId, existing.createdAt(), null, false);
         templateRepo.update(updated);
-        syncEmbedding(req.content(), id, "template", req.name());
-        return toTemplateResponse(updated);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                syncEmbedding(req.content(), id, "template", req.name());
+            }
+        });
+        return toTemplateResponse(updated, loadTagMap());
     }
 
     @Transactional
@@ -96,15 +109,16 @@ public class TemplateService {
     // === Clauses ===
     public List<ClauseResponse> listClauses(String search, List<Integer> tagIds, int page, int size) {
         int offset = (page - 1) * size;
+        Map<Integer, TemplateTag> tagMap = loadTagMap();
         return clauseRepo.list(search, tagIds, offset, size).stream()
-                .map(this::toClauseResponse)
+                .map(c -> toClauseResponse(c, tagMap))
                 .toList();
     }
 
     public ClauseResponse getClause(String id) {
         TemplateClause c = clauseRepo.getById(id)
                 .orElseThrow(() -> new ApiException(404, "条款不存在"));
-        return toClauseResponse(c);
+        return toClauseResponse(c, loadTagMap());
     }
 
     @Transactional
@@ -113,8 +127,13 @@ public class TemplateService {
         TemplateClause c = new TemplateClause(id, req.title(), req.content(), req.tags(),
                 memberId, memberId, null, null, false);
         clauseRepo.insert(c);
-        syncEmbedding(req.content(), id, "clause", req.title());
-        return toClauseResponse(c);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                syncEmbedding(req.content(), id, "clause", req.title());
+            }
+        });
+        return toClauseResponse(c, loadTagMap());
     }
 
     @Transactional
@@ -124,8 +143,13 @@ public class TemplateService {
         TemplateClause updated = new TemplateClause(id, req.title(), req.content(), req.tags(),
                 existing.createdBy(), memberId, existing.createdAt(), null, false);
         clauseRepo.update(updated);
-        syncEmbedding(req.content(), id, "clause", req.title());
-        return toClauseResponse(updated);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                syncEmbedding(req.content(), id, "clause", req.title());
+            }
+        });
+        return toClauseResponse(updated, loadTagMap());
     }
 
     @Transactional
@@ -147,9 +171,11 @@ public class TemplateService {
         }
     }
 
-    private TemplateResponse toTemplateResponse(CompanyTemplate t) {
-        List<TemplateTag> allTags = tagRepo.list();
-        Map<Integer, TemplateTag> tagMap = allTags.stream().collect(Collectors.toMap(TemplateTag::id, tag -> tag));
+    private Map<Integer, TemplateTag> loadTagMap() {
+        return tagRepo.list().stream().collect(Collectors.toMap(TemplateTag::id, tag -> tag));
+    }
+
+    private TemplateResponse toTemplateResponse(CompanyTemplate t, Map<Integer, TemplateTag> tagMap) {
         List<TagResponse> resolvedTags = t.tags().stream()
                 .map(id -> { TemplateTag tag = tagMap.get(id); return tag == null ? null : new TagResponse(tag.id(), tag.name(), tag.color()); })
                 .filter(Objects::nonNull)
@@ -159,9 +185,7 @@ public class TemplateService {
                 String.valueOf(t.createdAt()), String.valueOf(t.updatedAt()));
     }
 
-    private ClauseResponse toClauseResponse(TemplateClause c) {
-        List<TemplateTag> allTags = tagRepo.list();
-        Map<Integer, TemplateTag> tagMap = allTags.stream().collect(Collectors.toMap(TemplateTag::id, tag -> tag));
+    private ClauseResponse toClauseResponse(TemplateClause c, Map<Integer, TemplateTag> tagMap) {
         List<TagResponse> resolvedTags = c.tags().stream()
                 .map(id -> { TemplateTag tag = tagMap.get(id); return tag == null ? null : new TagResponse(tag.id(), tag.name(), tag.color()); })
                 .filter(Objects::nonNull)

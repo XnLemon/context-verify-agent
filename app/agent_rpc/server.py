@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from concurrent import futures
 
 import grpc
@@ -24,6 +25,7 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
         self.review_service = ReviewService()
         self.chat_service = ChatService()
         self.contract_editor: ContractEditor | None = None
+        self._embed_lock = threading.Lock()
 
     def Health(self, request, context):
         health = self.review_service.health()
@@ -152,12 +154,14 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             repo.upsert_chunks([chunk], version="template")
 
             documents = build_knowledge_documents([chunk])
-            try:
-                vector_store = load_vector_store(settings.knowledge_vector_store_dir)
-                vector_store.add_documents(documents)
-            except Exception:
-                vector_store = build_vector_store(documents)
-            save_vector_store(vector_store, settings.knowledge_vector_store_dir)
+
+            with self._embed_lock:
+                try:
+                    vector_store = load_vector_store(settings.knowledge_vector_store_dir)
+                    vector_store.add_documents(documents)
+                except Exception:
+                    vector_store = build_vector_store(documents)
+                save_vector_store(vector_store, settings.knowledge_vector_store_dir)
 
             return agent_pb2.JsonResponse(code=200, json=json.dumps({"status": "ok", "doc_id": request.doc_id}))
         except Exception as exc:

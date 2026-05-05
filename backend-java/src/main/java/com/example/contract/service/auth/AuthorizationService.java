@@ -42,8 +42,8 @@ public class AuthorizationService {
 
     public Member requireTemplateEditor(String authorization) {
         Member member = requireLoggedIn(authorization);
-        if (!"admin".equals(member.role()) && !"legal".equals(member.memberType()) && !"主管".equals(member.role())) {
-            throw new ApiException(403, "仅管理员、法务和主管可管理模板");
+        if (!"admin".equals(member.role()) && !"legal".equals(member.memberType())) {
+            throw new ApiException(403, "仅管理员和法务可管理模板");
         }
         return member;
     }

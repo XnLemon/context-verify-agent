@@ -17,7 +17,7 @@ public class CustomStubAgentGateway implements AgentGateway {
                 "llm_configured", true,
                 "knowledge_base_ready", true,
                 "version", "custom-stub",
-                "capabilities", List.of("health", "parse", "review", "chat", "redraft")
+                "capabilities", List.of("health", "parse", "review", "chat", "redraft", "embed")
         );
     }
 

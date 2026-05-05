@@ -4,6 +4,7 @@ import com.example.contract.dto.*;
 import com.example.contract.model.Member;
 import com.example.contract.service.auth.AuthorizationService;
 import com.example.contract.service.template.TemplateService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,13 +26,13 @@ public class TemplateController {
     }
 
     @PostMapping("/api/tags")
-    public TagResponse createTag(@RequestHeader("authorization") String auth, @RequestBody TagRequest req) {
+    public TagResponse createTag(@RequestHeader("authorization") String auth, @Valid @RequestBody TagRequest req) {
         authorizationService.requireTemplateEditor(auth);
         return templateService.createTag(req);
     }
 
     @PutMapping("/api/tags/{id}")
-    public TagResponse updateTag(@RequestHeader("authorization") String auth, @PathVariable int id, @RequestBody TagRequest req) {
+    public TagResponse updateTag(@RequestHeader("authorization") String auth, @PathVariable int id, @Valid @RequestBody TagRequest req) {
         authorizationService.requireTemplateEditor(auth);
         return templateService.updateTag(id, req);
     }
@@ -58,14 +59,14 @@ public class TemplateController {
     }
 
     @PostMapping("/api/templates")
-    public TemplateResponse createTemplate(@RequestHeader("authorization") String auth, @RequestBody TemplateRequest req) {
+    public TemplateResponse createTemplate(@RequestHeader("authorization") String auth, @Valid @RequestBody TemplateRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.createTemplate(req, member.id());
     }
 
     @PutMapping("/api/templates/{id}")
     public TemplateResponse updateTemplate(@RequestHeader("authorization") String auth,
-                                           @PathVariable String id, @RequestBody TemplateRequest req) {
+                                           @PathVariable String id, @Valid @RequestBody TemplateRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.updateTemplate(id, req, member.id());
     }
@@ -92,14 +93,14 @@ public class TemplateController {
     }
 
     @PostMapping("/api/clauses")
-    public ClauseResponse createClause(@RequestHeader("authorization") String auth, @RequestBody ClauseRequest req) {
+    public ClauseResponse createClause(@RequestHeader("authorization") String auth, @Valid @RequestBody ClauseRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.createClause(req, member.id());
     }
 
     @PutMapping("/api/clauses/{id}")
     public ClauseResponse updateClause(@RequestHeader("authorization") String auth,
-                                       @PathVariable String id, @RequestBody ClauseRequest req) {
+                                       @PathVariable String id, @Valid @RequestBody ClauseRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.updateClause(id, req, member.id());
     }

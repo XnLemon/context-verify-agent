@@ -1,10 +1,12 @@
 package com.example.contract.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 import java.util.List;
 
 public record TemplateRequest(
-        String name,
+        @NotBlank String name,
         String description,
-        String content,
+        @NotBlank String content,
         List<Integer> tags
 ) {}
