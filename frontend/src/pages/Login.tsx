@@ -1,5 +1,4 @@
-﻿import { FormEvent, useState } from 'react';
-
+import { FormEvent, useState } from 'react';
 import { login } from '@/src/lib/api';
 import { saveAuthSession } from '@/src/lib/auth';
 import type { UserMember } from '@/src/types';
@@ -31,46 +30,86 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">合同校审系统登录</h1>
-        <p className="mt-2 text-sm text-slate-500">登录后将自动识别成员类型并应用权限。</p>
+    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
+      {/* Top brand bar */}
+      <div className="bg-gradient-to-r from-[#1e40af] to-[#2563eb] px-10 py-3.5 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold text-sm">
+          S
+        </div>
+        <span className="text-white font-semibold text-base">SmartAudit</span>
+      </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label className="mb-1 block text-sm text-slate-700">用户名</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-              required
-            />
+      {/* Center content */}
+      <div className="flex-1 flex items-center justify-center px-6 relative">
+        {/* Grid background */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(37,99,235,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.5) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="flex items-center gap-20 relative z-10">
+          {/* Brand text */}
+          <div className="hidden lg:block max-w-xs">
+            <h2 className="text-3xl font-bold text-[#0f172a] leading-tight mb-3">
+              智能合同<br />
+              <span className="text-brand-600">校审管理平台</span>
+            </h2>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              基于 AI 的智能合同审核系统，支持风险识别、条款比对、版本追踪，让合同管理更高效、更安全。
+            </p>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm text-slate-700">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-              required
-            />
+          {/* Login card */}
+          <div className="w-full max-w-sm bg-surface rounded-xl shadow-card border border-border-light p-8">
+            <h3 className="text-xl font-semibold text-text-primary mb-1">登录</h3>
+            <p className="text-sm text-text-muted mb-6">登录后将自动识别成员类型并应用权限。</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5">用户名</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="请输入用户名"
+                  className="w-full px-3.5 py-2.5 rounded-md border border-border text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5">密码</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="请输入密码"
+                  className="w-full px-3.5 py-2.5 rounded-md border border-border text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                  required
+                />
+              </div>
+
+              {error && <p className="text-sm text-danger">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 rounded-md bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-all"
+              >
+                {loading ? '登录中...' : '登录'}
+              </button>
+            </form>
           </div>
+        </div>
+      </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? '登录中...' : '登录'}
-          </button>
-        </form>
+      {/* Bottom bar */}
+      <div className="bg-[#1e293b] px-10 py-3 flex items-center justify-between">
+        <span className="text-xs text-text-muted">© 2026 SmartAudit. All rights reserved.</span>
       </div>
     </div>
   );
 }
-
