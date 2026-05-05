@@ -83,7 +83,7 @@ export default function ContractLibrary({
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between text-sm">
           <p className="text-slate-600">
             共 <span className="font-semibold text-slate-900">{total}</span> 份合同
@@ -99,15 +99,15 @@ export default function ContractLibrary({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">合同名称</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">类型</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">状态</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">提交人</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">更新时间</th>
+                <tr className="bg-surface-subtle">
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">合同名称</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">类型</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">状态</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">提交人</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">更新时间</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border-light">
                 {loading ? (
                   <LoadingRow />
                 ) : pagedContracts.length === 0 ? (
@@ -146,8 +146,8 @@ export default function ContractLibrary({
           </div>
         )}
 
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
-          <p className="text-xs text-slate-500">
+        <div className="px-6 py-4 border-t border-border bg-surface-subtle flex items-center justify-between">
+          <p className="text-xs text-text-muted">
             当前显示 {(page - 1) * PAGE_SIZE + (pagedContracts.length ? 1 : 0)} - {(page - 1) * PAGE_SIZE + pagedContracts.length}
           </p>
           <div className="flex items-center gap-1">
@@ -155,7 +155,7 @@ export default function ContractLibrary({
               type="button"
               onClick={() => setPage((prev) => Math.max(1, prev - 1))}
               disabled={page <= 1}
-              className="h-8 w-8 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+              className="h-8 w-8 rounded-md border border-slate-200 bg-surface text-text-muted hover:bg-surface-subtle disabled:opacity-40"
             >
               <ChevronLeft size={16} className="mx-auto" />
             </button>
@@ -168,7 +168,7 @@ export default function ContractLibrary({
                   'h-8 min-w-8 px-2 rounded-md border text-sm',
                   page === pageNumber
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100',
+                    : 'bg-surface text-slate-600 border-slate-200 hover:bg-slate-100',
                 )}
               >
                 {pageNumber}
@@ -178,7 +178,7 @@ export default function ContractLibrary({
               type="button"
               onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={page >= totalPages}
-              className="h-8 w-8 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+              className="h-8 w-8 rounded-md border border-slate-200 bg-surface text-text-muted hover:bg-surface-subtle disabled:opacity-40"
             >
               <ChevronRight size={16} className="mx-auto" />
             </button>

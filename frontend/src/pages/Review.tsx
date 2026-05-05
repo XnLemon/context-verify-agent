@@ -339,7 +339,7 @@ export default function Review({
 
   return (
     <div className="h-full flex flex-col bg-slate-50">
-      <div className="h-14 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+      <div className="h-14 bg-surface border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
             <ArrowLeft size={20} />
@@ -427,12 +427,12 @@ export default function Review({
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-auto p-8 flex justify-center">
-          <div className="w-full max-w-4xl bg-white shadow-xl shadow-slate-200/50 border border-slate-200 rounded-lg h-[min(100vh-9rem,960px)] min-h-[560px] p-8 md:p-12 font-serif leading-relaxed text-slate-800">
+          <div className="w-full max-w-4xl bg-surface shadow-xl shadow-slate-200/50 border border-slate-200 rounded-lg h-[min(100vh-9rem,960px)] min-h-[560px] p-8 md:p-12 font-serif leading-relaxed text-slate-800">
             {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>}
                         {isEditingContent ? (
               <div className="h-full flex flex-col">
                 <EditorErrorBoundary key={editKey}>
-                  <React.Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 bg-white animate-pulse" />}>
+                  <React.Suspense fallback={<div className="h-64 rounded-lg border border-slate-200 bg-surface animate-pulse" />}>
                     <RichTextEditor
                       content={contract.content}
                       onChange={setDraftContent}
@@ -447,7 +447,7 @@ export default function Review({
           </div>
         </div>
 
-        <aside className="w-[420px] bg-white border-l border-slate-200 flex flex-col shrink-0">
+        <aside className="w-[420px] bg-surface border-l border-slate-200 flex flex-col shrink-0">
           <ReviewTemplatePanel onInsertContent={handleInsertTemplate} />
           <div className="flex border-b border-slate-100 shrink-0">
             <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} icon={<Zap size={16} />} label="智能扫描" />
@@ -521,7 +521,7 @@ export default function Review({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ delay: index * 0.08 }}
-                        className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
+                        className="group bg-surface border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -576,7 +576,7 @@ export default function Review({
               <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
                 <div className="flex-1 overflow-auto p-6 space-y-6">
                   {chatMessages.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-surface px-4 py-8 text-center text-sm text-slate-500">
                       还没有对话记录，可以直接向 AI 追问合同风险、法条依据或修改建议。
                     </div>
                   ) : (
@@ -606,7 +606,7 @@ export default function Review({
                             'p-4 rounded-2xl text-sm leading-relaxed shadow-sm whitespace-pre-wrap',
                             msg.role === 'user'
                               ? 'bg-blue-600 text-white rounded-tr-none'
-                              : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none',
+                              : 'bg-surface border border-slate-200 text-slate-800 rounded-tl-none',
                           )}
                         >
                           {msg.content || (msg.id === streamingAssistantId ? (
@@ -622,7 +622,7 @@ export default function Review({
                   <div ref={chatEndRef} />
                 </div>
 
-                <div className="p-4 bg-white border-t border-slate-200">
+                <div className="p-4 bg-surface border-t border-slate-200">
                   <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 no-scrollbar">
                     <button
                       onClick={() => setInputMessage('请结合当前合同，给我争议解决条款的修改建议。')}
@@ -916,7 +916,7 @@ class EditorErrorBoundary extends React.Component<
 function EmptyState({ onBack, message }: { onBack: () => void; message: string }) {
   return (
     <div className="h-full flex items-center justify-center bg-slate-50">
-      <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+      <div className="max-w-md rounded-2xl border border-slate-200 bg-surface p-8 shadow-sm text-center">
         <p className="text-sm text-slate-600">{message}</p>
         <button
           onClick={onBack}
