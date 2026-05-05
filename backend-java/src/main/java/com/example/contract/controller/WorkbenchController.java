@@ -125,6 +125,15 @@ public class WorkbenchController {
                 payload.get("comment") == null ? null : payload.get("comment").toString(), member);
     }
 
+    @PostMapping("/api/workbench/contracts/{contractId}/scan-multi")
+    public PipelineStatusResponse scanMulti(@RequestHeader(value = "authorization", required = false) String authorization,
+                                            @PathVariable String contractId,
+                                            @RequestParam(value = "contract_type", required = false) String contractType,
+                                            @RequestParam(value = "our_side", defaultValue = "甲方") String ourSide) {
+        Member member = authorizationService.requireLoggedIn(authorization);
+        return workbenchService.scanContractMulti(contractId, contractType, ourSide, member);
+    }
+
     @PostMapping("/api/workbench/contracts/{contractId}/redraft")
     public RedraftResponse redraft(@RequestHeader(value = "authorization", required = false) String authorization,
                                        @PathVariable String contractId,
