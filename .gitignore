@@ -47,6 +47,7 @@ desktop.ini
 # Local agent / workspace artifacts
 .claude/
 .codex/
+.worktrees/
 .agents/
 .run/
 AGENTS.md
