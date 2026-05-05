@@ -3,9 +3,9 @@
 import grpc
 import warnings
 
-from app.agent_rpc import agent_pb2 as agent__pb2
+import agent_pb2 as agent__pb2
 
-GRPC_GENERATED_VERSION = '1.66.2'
+GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in agent_pb2_grpc.py depends on'
+        + ' but the generated code in agent_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -64,6 +64,11 @@ class AgentRpcServiceStub(object):
                 request_serializer=agent__pb2.RedraftRequest.SerializeToString,
                 response_deserializer=agent__pb2.JsonResponse.FromString,
                 _registered_method=True)
+        self.EmbedDocument = channel.unary_unary(
+                '/contract.agent.v1.AgentRpcService/EmbedDocument',
+                request_serializer=agent__pb2.EmbedDocumentRequest.SerializeToString,
+                response_deserializer=agent__pb2.JsonResponse.FromString,
+                _registered_method=True)
 
 
 class AgentRpcServiceServicer(object):
@@ -105,6 +110,12 @@ class AgentRpcServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def EmbedDocument(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentRpcServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -136,6 +147,11 @@ def add_AgentRpcServiceServicer_to_server(servicer, server):
             'Redraft': grpc.unary_unary_rpc_method_handler(
                     servicer.Redraft,
                     request_deserializer=agent__pb2.RedraftRequest.FromString,
+                    response_serializer=agent__pb2.JsonResponse.SerializeToString,
+            ),
+            'EmbedDocument': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmbedDocument,
+                    request_deserializer=agent__pb2.EmbedDocumentRequest.FromString,
                     response_serializer=agent__pb2.JsonResponse.SerializeToString,
             ),
     }
@@ -300,6 +316,33 @@ class AgentRpcService(object):
             target,
             '/contract.agent.v1.AgentRpcService/Redraft',
             agent__pb2.RedraftRequest.SerializeToString,
+            agent__pb2.JsonResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EmbedDocument(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/contract.agent.v1.AgentRpcService/EmbedDocument',
+            agent__pb2.EmbedDocumentRequest.SerializeToString,
             agent__pb2.JsonResponse.FromString,
             options,
             channel_credentials,

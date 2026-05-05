@@ -32,7 +32,7 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             llm_configured=health.llm_configured,
             knowledge_base_ready=health.knowledge_base_ready,
             version="agent-python-1.0",
-            capabilities=["health", "parse", "review", "chat", "redraft"],
+            capabilities=["health", "parse", "review", "chat", "redraft", "embed"],
         )
 
     def ParseFile(self, request, context):
@@ -131,6 +131,33 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=503, error=str(exc))
         except Exception as exc:
             return agent_pb2.JsonResponse(code=500, error=f"unexpected error: {exc}")
+
+    def EmbedDocument(self, request, context):
+        try:
+            from app.rag.knowledge_chunk_repository import KnowledgeChunkRepository
+            from app.schemas.knowledge import KnowledgeChunk
+            from app.rag.vector_store import build_vector_store, save_vector_store
+
+            chunk = KnowledgeChunk(
+                chunk_id=request.doc_id,
+                doc_name=request.title or "template",
+                source_path=f"template/{request.source_type}",
+                text=request.text,
+                metadata={
+                    "source_type": request.source_type,
+                    "db_id": request.doc_id,
+                    "name": request.title,
+                }
+            )
+            repo = KnowledgeChunkRepository()
+            repo.upsert_chunks([chunk], version="template")
+            vector_store = build_vector_store()
+            vector_store.add_documents([chunk])
+            save_vector_store(vector_store)
+
+            return agent_pb2.JsonResponse(code=200, json=json.dumps({"status": "ok", "doc_id": request.doc_id}))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"embed failed: {exc}")
 
 
 def serve() -> None:
