@@ -36,7 +36,7 @@ export default function Employees() {
       <h2 className="text-xl font-semibold text-slate-900">员工列表</h2>
       <p className="mt-1 text-sm text-slate-500">仅管理员可查看和维护员工账号。</p>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-surface">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>

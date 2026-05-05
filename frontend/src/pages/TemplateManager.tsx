@@ -184,8 +184,8 @@ export default function TemplateManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">模板管理</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold text-text-primary">模板管理</h1>
+          <p className="text-sm text-text-secondary mt-1">
             管理合同全文模板和条款片段，支持标签分类和快速检索。
           </p>
         </div>
@@ -193,7 +193,7 @@ export default function TemplateManager() {
           type="button"
           onClick={() => void loadData()}
           disabled={loading}
-          className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50"
+          className="px-4 py-2 rounded-lg border border-border text-sm text-text-secondary hover:bg-surface-subtle flex items-center gap-2 disabled:opacity-50"
         >
           <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
           刷新
@@ -201,7 +201,7 @@ export default function TemplateManager() {
       </div>
 
       {/* Tab Bar */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-border">
         <div className="flex gap-6">
           <TabButton
             active={activeTab === 'templates'}
@@ -221,20 +221,20 @@ export default function TemplateManager() {
       {/* Search + New Button */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索名称..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            className="w-full pl-9 pr-4 py-2 bg-surface-subtle border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
           />
         </div>
         <button
           type="button"
           onClick={openNewEditor}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
           <Plus size={16} />
           {activeTab === 'templates' ? '新建模板' : '新建条款'}
@@ -243,8 +243,8 @@ export default function TemplateManager() {
 
       {/* Tag Filter */}
       {tags.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <p className="text-xs font-medium text-slate-500 mb-2">按标签筛选</p>
+        <div className="bg-surface rounded-xl border border-border p-4">
+          <p className="text-xs font-medium text-text-secondary mb-2">按标签筛选</p>
           <TemplateTagManager
             tags={tags}
             selectedTagIds={selectedFilterTagIds}
@@ -256,7 +256,7 @@ export default function TemplateManager() {
 
       {/* Error display */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}
@@ -278,13 +278,13 @@ export default function TemplateManager() {
       {/* List View */}
       <div className="space-y-3">
         {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
-            <p className="text-sm text-slate-500">正在加载...</p>
+          <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center">
+            <p className="text-sm text-text-secondary">正在加载...</p>
           </div>
         ) : items.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center space-y-2">
-            <FileText className="mx-auto text-slate-300" size={40} />
-            <p className="text-sm text-slate-500">
+          <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center space-y-2">
+            <FileText className="mx-auto text-text-muted" size={40} />
+            <p className="text-sm text-text-secondary">
               {hasFilter
                 ? '没有符合条件的记录。'
                 : activeTab === 'templates'
@@ -327,10 +327,10 @@ export default function TemplateManager() {
       </div>
 
       {/* Tag Management Section */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-900">标签管理</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+      <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-border-light">
+          <h2 className="text-base font-semibold text-text-primary">标签管理</h2>
+          <p className="text-xs text-text-secondary mt-0.5">
             管理所有标签，删除标签后关联关系自动解除。
           </p>
         </div>
@@ -368,8 +368,8 @@ function TabButton({
       className={cn(
         'pb-3 text-sm font-medium border-b-2 transition-colors',
         active
-          ? 'border-blue-600 text-blue-600'
-          : 'border-transparent text-slate-500 hover:text-slate-700',
+          ? 'border-blue-600 text-brand-600'
+          : 'border-transparent text-text-secondary hover:text-text-primary',
       )}
     >
       {children}
@@ -398,17 +398,17 @@ function ItemCard({
   const description = tmpl?.description ?? null;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-surface rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow">
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 mt-0.5">
+            <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600 shrink-0 mt-0.5">
               <FileText size={18} />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-slate-900 truncate">{title}</h3>
+              <h3 className="font-semibold text-text-primary truncate">{title}</h3>
               {description && (
-                <p className="text-sm text-slate-500 mt-0.5 line-clamp-2">
+                <p className="text-sm text-text-secondary mt-0.5 line-clamp-2">
                   {description}
                 </p>
               )}
@@ -436,7 +436,7 @@ function ItemCard({
               type="button"
               onClick={onEdit}
               disabled={disabled}
-              className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-40"
+              className="p-2 rounded-lg text-text-muted hover:text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-40"
               title="编辑"
             >
               <Pencil size={16} />
@@ -445,15 +445,15 @@ function ItemCard({
               type="button"
               onClick={onDelete}
               disabled={disabled}
-              className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+              className="p-2 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-40"
               title="删除"
             >
               <Trash2 size={16} />
             </button>
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+        <div className="mt-3 pt-3 border-t border-border-light flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xs text-text-muted">
             <span>
               创建人: {item.createdBy}
             </span>
@@ -461,7 +461,7 @@ function ItemCard({
               {new Date(item.createdAt).toLocaleDateString('zh-CN')}
             </span>
           </div>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-text-muted">
             更新于 {new Date(item.updatedAt).toLocaleDateString('zh-CN')}
           </span>
         </div>
@@ -501,16 +501,16 @@ function InlineEditor({
   }
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-blue-200 shadow-lg overflow-hidden">
-      <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-blue-700">
+    <div className="bg-surface rounded-2xl border-2 border-brand-200 shadow-lg overflow-hidden">
+      <div className="px-6 py-3 bg-brand-50 border-b border-blue-100 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-brand-700">
           {editForm.name ? `编辑: ${editForm.name}` : isTemplate ? '新建模板' : '新建条款'}
         </h3>
         <button
           type="button"
           onClick={onCancel}
           disabled={saving}
-          className="p-1 rounded-md text-blue-400 hover:text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+          className="p-1 rounded-md text-brand-400 hover:text-brand-600 hover:bg-brand-100 disabled:opacity-50"
         >
           <X size={16} />
         </button>
@@ -519,7 +519,7 @@ function InlineEditor({
       <div className="px-6 py-4 space-y-4">
         {/* Name / Title */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">
             {isTemplate ? '模板名称' : '条款标题'}
           </label>
           <input
@@ -527,14 +527,14 @@ function InlineEditor({
             value={editForm.name}
             onChange={(e) => updateField('name', e.target.value)}
             placeholder={isTemplate ? '输入模板名称...' : '输入条款标题...'}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           />
         </div>
 
         {/* Description (templates only) */}
         {isTemplate && (
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">
               描述
             </label>
             <textarea
@@ -542,14 +542,14 @@ function InlineEditor({
               onChange={(e) => updateField('description', e.target.value)}
               placeholder="输入模板描述（可选）..."
               rows={2}
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
             />
           </div>
         )}
 
         {/* Content */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">
             内容
           </label>
           <textarea
@@ -557,13 +557,13 @@ function InlineEditor({
             onChange={(e) => updateField('content', e.target.value)}
             placeholder="输入正文内容..."
             rows={8}
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono leading-relaxed resize-y"
+            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-mono leading-relaxed resize-y"
           />
         </div>
 
         {/* Tags */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-2">
+          <label className="block text-xs font-medium text-text-secondary mb-2">
             关联标签
           </label>
           <TemplateTagManager
@@ -576,12 +576,12 @@ function InlineEditor({
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+      <div className="px-6 py-4 bg-surface-subtle border-t border-border-light flex items-center justify-end gap-3">
         <button
           type="button"
           onClick={onCancel}
           disabled={saving}
-          className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-lg border border-border text-text-secondary hover:bg-surface-subtle disabled:opacity-50"
         >
           取消
         </button>
@@ -589,7 +589,7 @@ function InlineEditor({
           type="button"
           onClick={onSave}
           disabled={saving || !editForm.name.trim() || !editForm.content.trim()}
-          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-lg bg-brand-600 text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? '保存中...' : '保存'}
         </button>

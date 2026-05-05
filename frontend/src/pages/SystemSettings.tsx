@@ -54,7 +54,7 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
         <p className="mt-1 text-sm text-slate-500">管理应用偏好，不影响个人资料信息。</p>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">主题模式</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {([
@@ -69,7 +69,7 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
               className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
                 themePreference === value
                   ? 'border-blue-600 bg-blue-50 text-blue-700'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  : 'border-slate-200 bg-surface text-slate-700 hover:bg-slate-50'
               }`}
             >
               {label}
@@ -78,7 +78,7 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">字体大小</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {([
@@ -93,7 +93,7 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
               className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
                 fontScale === value
                   ? 'border-blue-600 bg-blue-50 text-blue-700'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  : 'border-slate-200 bg-surface text-slate-700 hover:bg-slate-50'
               }`}
             >
               {label}
@@ -102,7 +102,7 @@ export default function SystemSettings({ currentUser, onUserUpdated }: SystemSet
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">通知偏好</h2>
         <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
           <span className="text-sm text-slate-700">开启消息提醒</span>

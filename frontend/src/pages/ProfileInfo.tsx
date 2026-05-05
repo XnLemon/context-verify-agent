@@ -80,7 +80,7 @@ export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoP
         <p className="mt-1 text-sm text-slate-500">修改昵称与头像，保存后会同步到当前账号。</p>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">头像</h2>
         <div className="flex items-center gap-4">
           <img src={avatarSrc} alt="avatar" className="h-20 w-20 rounded-full border border-slate-200 object-cover" />
@@ -97,7 +97,7 @@ export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoP
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">昵称</h2>
         <input
           value={displayName}
@@ -125,7 +125,7 @@ export default function ProfileInfo({ currentUser, onUserUpdated }: ProfileInfoP
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 space-y-2">
+      <section className="rounded-2xl border border-slate-200 bg-surface p-6 space-y-2">
         <h2 className="text-lg font-semibold text-slate-900">登录信息</h2>
         <p className="text-sm text-slate-600">用户名：{currentUser.username}</p>
         <p className="text-sm text-slate-600">最近登录：{currentUser.lastLoginAt ?? '暂无记录'}</p>
