@@ -104,6 +104,17 @@ public class GrpcAgentGateway implements AgentGateway {
         return revised == null ? contractText : revised.toString();
     }
 
+    @Override
+    public Map<String, Object> embedDocument(String text, String docId, String sourceType, String title) {
+        EmbedDocumentRequest req = EmbedDocumentRequest.newBuilder()
+                .setText(text)
+                .setDocId(docId)
+                .setSourceType(sourceType)
+                .setTitle(title)
+                .build();
+        return parseJson(call(() -> withTimeout().embedDocument(req)));
+    }
+
     @PreDestroy
     public void shutdown() {
         channel.shutdown();

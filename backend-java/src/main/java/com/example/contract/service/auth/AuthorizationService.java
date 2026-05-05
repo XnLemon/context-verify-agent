@@ -39,4 +39,12 @@ public class AuthorizationService {
         }
         throw new ApiException(403, "仅经理/审核可执行最终审批");
     }
+
+    public Member requireTemplateEditor(String authorization) {
+        Member member = requireLoggedIn(authorization);
+        if (!"admin".equals(member.role()) && !"legal".equals(member.memberType())) {
+            throw new ApiException(403, "仅管理员和法务可管理模板");
+        }
+        return member;
+    }
 }

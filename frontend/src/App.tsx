@@ -7,6 +7,7 @@ import {
   Clock,
   FileText,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   Search,
   Settings,
@@ -30,6 +31,7 @@ import Review from './pages/Review';
 import ReviewedContracts from './pages/ReviewedContracts';
 import RiskAlerts from './pages/RiskAlerts';
 import SystemSettings from './pages/SystemSettings';
+import TemplateManager from './pages/TemplateManager';
 
 type ListPage =
   | 'dashboard'
@@ -37,6 +39,7 @@ type ListPage =
   | 'reviewed'
   | 'alerts'
   | 'pending'
+  | 'templates'
   | 'employees'
   | 'add-employee'
   | 'system-settings'
@@ -59,7 +62,7 @@ export default function App() {
   const isAdmin = currentUser?.role === 'admin';
 
   const visibleListPages = useMemo<ListPage[]>(() => {
-    const base: ListPage[] = ['dashboard', 'library', 'reviewed', 'alerts', 'pending', 'system-settings', 'profile-info'];
+    const base: ListPage[] = ['dashboard', 'library', 'reviewed', 'alerts', 'pending', 'templates', 'system-settings', 'profile-info'];
     if (isAdmin) {
       base.push('employees', 'add-employee');
     }
@@ -161,6 +164,7 @@ export default function App() {
     reviewed: '已审核 - SmartAudit',
     alerts: '风险预警 - SmartAudit',
     pending: '待处理 - SmartAudit',
+    templates: '公司模板 - SmartAudit',
     employees: '员工管理 - SmartAudit',
     'add-employee': '添加员工 - SmartAudit',
     'system-settings': '系统设置 - SmartAudit',
@@ -190,6 +194,7 @@ export default function App() {
           <NavItem icon={<CheckCircle2 size={20} />} label="已审核" active={currentPage === 'reviewed'} onClick={() => navigateToList('reviewed')} />
           <NavItem icon={<AlertCircle size={20} />} label="风险预警" active={currentPage === 'alerts'} onClick={() => navigateToList('alerts')} />
           <NavItem icon={<Clock size={20} />} label="待处理" active={currentPage === 'pending'} onClick={() => navigateToList('pending')} />
+          <NavItem icon={<LayoutTemplate size={20} />} label="公司模板" active={currentPage === 'templates'} onClick={() => navigateToList('templates')} />
           {isAdmin && <NavItem icon={<Users size={20} />} label="员工页" active={currentPage === 'employees'} onClick={() => navigateToList('employees')} />}
           {isAdmin && <NavItem icon={<UserPlus size={20} />} label="添加员工" active={currentPage === 'add-employee'} onClick={() => navigateToList('add-employee')} />}
         </nav>
@@ -258,6 +263,7 @@ export default function App() {
           {currentPage === 'reviewed' && <ReviewedContracts onReviewContract={(id) => navigateToReview(id, 'reviewed')} searchQuery={deferredSearchQuery} />}
           {currentPage === 'alerts' && <RiskAlerts onReviewContract={(id) => navigateToReview(id, 'alerts')} searchQuery={deferredSearchQuery} />}
           {currentPage === 'pending' && <PendingContracts onReviewContract={(id) => navigateToReview(id, 'pending')} searchQuery={deferredSearchQuery} />}
+          {currentPage === 'templates' && <TemplateManager />}
           {currentPage === 'employees' && isAdmin && <Employees />}
           {currentPage === 'add-employee' && isAdmin && <AddEmployee />}
           {currentPage === 'system-settings' && (

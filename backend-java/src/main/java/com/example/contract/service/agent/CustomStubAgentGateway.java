@@ -17,7 +17,7 @@ public class CustomStubAgentGateway implements AgentGateway {
                 "llm_configured", true,
                 "knowledge_base_ready", true,
                 "version", "custom-stub",
-                "capabilities", List.of("health", "parse", "review", "chat", "redraft")
+                "capabilities", List.of("health", "parse", "review", "chat", "redraft", "embed")
         );
     }
 
@@ -75,6 +75,11 @@ public class CustomStubAgentGateway implements AgentGateway {
     @Override
     public String redraft(String contractText, String contractType, String ourSide, List<Map<String, String>> acceptedIssues) {
         return contractText + "\n\n[custom adapter stub redraft]";
+    }
+
+    @Override
+    public Map<String, Object> embedDocument(String text, String docId, String sourceType, String title) {
+        return Map.of("status", "ok", "doc_id", docId);
     }
 
     private Map<String, Object> reviewLike(String text, String contractType) {

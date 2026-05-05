@@ -13,6 +13,7 @@ service AgentRpcService {
   rpc Chat(ChatRequest) returns (JsonResponse);
   rpc ChatStream(ChatRequest) returns (stream ChatStreamResponse);
   rpc Redraft(RedraftRequest) returns (JsonResponse);
+  rpc EmbedDocument(EmbedDocumentRequest) returns (JsonResponse);
 }
 
 message HealthRequest {}
@@ -48,6 +49,13 @@ message RedraftRequest {
   string contract_type = 2;
   string our_side = 3;
   string accepted_issues_json = 4;
+}
+
+message EmbedDocumentRequest {
+  string text = 1;
+  string doc_id = 2;
+  string source_type = 3;  // "template" | "clause"
+  string title = 4;
 }
 
 message FilePayload {
