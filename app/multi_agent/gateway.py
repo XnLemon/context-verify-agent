@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Literal
+from typing import Literal
 
 from app.multi_agent.config import MultiAgentConfig
 from app.multi_agent.protocol import (
     AgentMode,
-    GatewayRequest,
     GatewayResponse,
     PipelineEvent,
     PipelineState,
