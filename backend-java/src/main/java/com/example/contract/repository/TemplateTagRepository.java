@@ -21,8 +21,8 @@ public class TemplateTagRepository {
         return jdbc.query("select * from template_tags order by name", this::toTag);
     }
 
-    public void insert(String name, String color) {
-        jdbc.update("insert into template_tags(name,color) values (?,?)", name, color);
+    public int insert(String name, String color) {
+        return jdbc.queryForObject("insert into template_tags(name,color) values (?,?) returning id", Integer.class, name, color);
     }
 
     public void update(int id, String name, String color) {

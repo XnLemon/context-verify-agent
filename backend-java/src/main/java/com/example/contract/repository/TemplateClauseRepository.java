@@ -20,15 +20,21 @@ public class TemplateClauseRepository {
     }
 
     public List<TemplateClause> list(String search, List<Integer> tagIds, int offset, int limit) {
-        String sql = "select * from template_clauses where is_deleted=false";
+        StringBuilder sql = new StringBuilder("select * from template_clauses where is_deleted=false");
         if (search != null && !search.isBlank()) {
-            sql += " and title ilike ?";
+            sql.append(" and title ilike ?");
         }
-        sql += " order by updated_at desc limit ? offset ?";
-        return jdbc.query(sql, ps -> {
+        if (tagIds != null && !tagIds.isEmpty()) {
+            sql.append(" and tags @> ?::jsonb");
+        }
+        sql.append(" order by updated_at desc limit ? offset ?");
+        return jdbc.query(sql.toString(), ps -> {
             int i = 1;
             if (search != null && !search.isBlank()) {
                 ps.setString(i++, "%" + search + "%");
+            }
+            if (tagIds != null && !tagIds.isEmpty()) {
+                ps.setString(i++, toJsonArray(tagIds));
             }
             ps.setInt(i++, limit);
             ps.setInt(i, offset);

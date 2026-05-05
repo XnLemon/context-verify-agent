@@ -20,17 +20,23 @@ public class TemplateRepository {
     }
 
     public List<CompanyTemplate> list(String search, List<Integer> tagIds, int offset, int limit) {
-        String sql = "select * from company_templates where is_deleted=false";
+        StringBuilder sql = new StringBuilder("select * from company_templates where is_deleted=false");
         if (search != null && !search.isBlank()) {
-            sql += " and (name ilike ? or description ilike ?)";
+            sql.append(" and (name ilike ? or description ilike ?)");
         }
-        sql += " order by updated_at desc limit ? offset ?";
-        return jdbc.query(sql, ps -> {
+        if (tagIds != null && !tagIds.isEmpty()) {
+            sql.append(" and tags @> ?::jsonb");
+        }
+        sql.append(" order by updated_at desc limit ? offset ?");
+        return jdbc.query(sql.toString(), ps -> {
             int i = 1;
             if (search != null && !search.isBlank()) {
                 String p = "%" + search + "%";
                 ps.setString(i++, p);
                 ps.setString(i++, p);
+            }
+            if (tagIds != null && !tagIds.isEmpty()) {
+                ps.setString(i++, toJsonArray(tagIds));
             }
             ps.setInt(i++, limit);
             ps.setInt(i, offset);

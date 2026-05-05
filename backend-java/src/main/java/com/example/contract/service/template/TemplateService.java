@@ -40,10 +40,8 @@ public class TemplateService {
     }
 
     public TagResponse createTag(TagRequest req) {
-        tagRepo.insert(req.name(), req.color());
-        List<TemplateTag> all = tagRepo.list();
-        TemplateTag tag = all.get(all.size() - 1);
-        return new TagResponse(tag.id(), tag.name(), tag.color());
+        int id = tagRepo.insert(req.name(), req.color());
+        return new TagResponse(id, req.name(), req.color());
     }
 
     public TagResponse updateTag(int id, TagRequest req) {

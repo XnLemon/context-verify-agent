@@ -68,14 +68,13 @@ class TemplateServiceTest {
     @Test
     void createTag_shouldInsertAndReturn() {
         TemplateService service = new TemplateService(templateRepo, clauseRepo, tagRepo, agentGateway);
-        when(tagRepo.list()).thenReturn(List.of(
-                new TemplateTag(1, "TestTag", "#ff0000", null, null)
-        ));
+        when(tagRepo.insert("TestTag", "#ff0000")).thenReturn(1);
 
         var result = service.createTag(new TagRequest("TestTag", "#ff0000"));
 
         assertNotNull(result);
         assertEquals("TestTag", result.name());
+        assertEquals(1, result.id());
         verify(tagRepo).insert("TestTag", "#ff0000");
     }
 }
