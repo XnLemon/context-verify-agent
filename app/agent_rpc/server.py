@@ -136,24 +136,28 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
         try:
             from app.rag.knowledge_chunk_repository import KnowledgeChunkRepository
             from app.schemas.knowledge import KnowledgeChunk
-            from app.rag.vector_store import build_vector_store, save_vector_store
+            from app.rag.knowledge_documents import build_knowledge_documents
+            from app.rag.vector_store import load_vector_store, save_vector_store, build_vector_store
+            from app.core.config import settings
 
             chunk = KnowledgeChunk(
                 chunk_id=request.doc_id,
                 doc_name=request.title or "template",
-                source_path=f"template/{request.source_type}",
+                doc_type="template",
+                title=request.title or "template",
                 text=request.text,
-                metadata={
-                    "source_type": request.source_type,
-                    "db_id": request.doc_id,
-                    "name": request.title,
-                }
+                source_path=f"template/{request.source_type}",
             )
             repo = KnowledgeChunkRepository()
             repo.upsert_chunks([chunk], version="template")
-            vector_store = build_vector_store()
-            vector_store.add_documents([chunk])
-            save_vector_store(vector_store)
+
+            documents = build_knowledge_documents([chunk])
+            try:
+                vector_store = load_vector_store(settings.knowledge_vector_store_dir)
+                vector_store.add_documents(documents)
+            except Exception:
+                vector_store = build_vector_store(documents)
+            save_vector_store(vector_store, settings.knowledge_vector_store_dir)
 
             return agent_pb2.JsonResponse(code=200, json=json.dumps({"status": "ok", "doc_id": request.doc_id}))
         except Exception as exc:
