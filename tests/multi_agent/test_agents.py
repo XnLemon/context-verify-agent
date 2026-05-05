@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import unittest
-from unittest import mock
 
 from app.multi_agent.agents import parser_agent, summarizer_agent
 

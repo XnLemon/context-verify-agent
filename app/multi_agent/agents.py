@@ -60,11 +60,11 @@ def parser_agent(ctx: dict[str, Any]) -> AgentOutput:
 # Agent 2: Risk Checker — run rule engine + LLM enrichment
 # ---------------------------------------------------------------------------
 
-def _find_clause_text(clauses: list[dict], clause_no: str) -> str:
+def _find_clause_text(clauses: list[dict], clause_no: str, fallback: str = "") -> str:
     for c in clauses:
         if c["clause_no"] == clause_no:
             return c["text"]
-    return ""
+    return fallback
 
 
 def risk_checker_agent(ctx: dict[str, Any]) -> AgentOutput:
@@ -104,7 +104,7 @@ def risk_checker_agent(ctx: dict[str, Any]) -> AgentOutput:
 
     findings = []
     for risk in risks:
-        clause_text = _find_clause_text(clauses, risk.clause_no)
+        clause_text = _find_clause_text(clauses, risk.clause_no, risk.evidence)
         retrieved_contexts = []
         if knowledge_retriever:
             query = f"{contract_type} {risk.title} {risk.evidence}"
