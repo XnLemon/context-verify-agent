@@ -52,10 +52,14 @@ class PipelineOrchestrator:
         self._emit(on_event, self._event(state, "pipeline_started"))
 
         ctx = dict(initial_input)
-        agent_queue = self._build_queue(state.team)
+        agent_queue = list(self._build_queue(state.team))
         skipped_agents: set[str] = set()
+        idx = 0
 
-        for agent_id in agent_queue:
+        while idx < len(agent_queue):
+            agent_id = agent_queue[idx]
+            idx += 1
+
             if state.status == PipelineStatus.CANCELLED:
                 break
 
@@ -87,8 +91,9 @@ class PipelineOrchestrator:
                 if next_target == "__skip__":
                     skipped_agents.add(agent_id)
                     continue
-                idx = agent_queue.index(agent_id)
-                agent_queue.insert(idx + 1, next_target)
+                # Replace current agent's slot with fallback (don't advance counter)
+                agent_queue[idx - 1] = next_target
+                idx -= 1
                 continue
 
             state.agent_outputs[agent_id] = output
@@ -104,7 +109,13 @@ class PipelineOrchestrator:
         if state.status not in (PipelineStatus.FAILED, PipelineStatus.CANCELLED):
             state.status = PipelineStatus.COMPLETED
         state.completed_at = datetime.now(timezone.utc)
-        self._emit(on_event, self._event(state, "pipeline_completed"))
+
+        closing_event = {
+            PipelineStatus.COMPLETED: "pipeline_completed",
+            PipelineStatus.FAILED: "pipeline_failed",
+            PipelineStatus.CANCELLED: "pipeline_cancelled",
+        }.get(state.status, "pipeline_completed")
+        self._emit(on_event, self._event(state, closing_event))
         return state
 
     def cancel(self, state: PipelineState) -> None:
