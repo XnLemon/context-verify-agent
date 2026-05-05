@@ -3,6 +3,47 @@
 @theme {
   --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-serif: "Georgia", "Source Han Serif SC", "Noto Serif CJK SC", serif;
+
+  /* Brand */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  /* Surface */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f8fafc;
+  --color-sidebar: #0f172a;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: #2563eb;
+
+  /* Text */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-sidebar: #94a3b8;
+  --color-text-sidebar-active: #ffffff;
+
+  /* Border */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+
+  /* Semantic */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
@@ -15,19 +56,18 @@
   html[data-theme='dark'] {
     --app-bg: #0b1220;
     --app-text: #e2e8f0;
+    --color-surface: #0f172a;
+    --color-surface-subtle: #1e293b;
+    --color-sidebar: #020617;
+    --color-text-primary: #e2e8f0;
+    --color-text-secondary: #94a3b8;
+    --color-border: #334155;
+    --color-border-light: #1e293b;
   }
 
-  html[data-font-scale='small'] {
-    --app-font-scale: 0.93;
-  }
-
-  html[data-font-scale='medium'] {
-    --app-font-scale: 1;
-  }
-
-  html[data-font-scale='large'] {
-    --app-font-scale: 1.08;
-  }
+  html[data-font-scale='small'] { --app-font-scale: 0.93; }
+  html[data-font-scale='medium'] { --app-font-scale: 1; }
+  html[data-font-scale='large'] { --app-font-scale: 1.08; }
 
   body {
     @apply text-slate-900;
@@ -37,124 +77,45 @@
   }
 }
 
-.markdown-body {
-  @apply text-slate-800 leading-relaxed;
+/* Dark mode overrides removed — components reference CSS variables directly */
+
+/* TipTap editor styles */
+.tiptap-editor .ProseMirror {
+  @apply outline-none min-h-[300px] leading-relaxed;
+  color: var(--color-text-primary);
+}
+.tiptap-editor .ProseMirror p { @apply mb-3; }
+.tiptap-editor .ProseMirror h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 1.5rem; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; margin-top: 1rem; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror strong { font-weight: 700; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror ul { @apply list-disc pl-6 mb-3; }
+.tiptap-editor .ProseMirror ol { @apply list-decimal pl-6 mb-3; }
+.tiptap-editor .ProseMirror li { @apply mb-1; }
+.tiptap-editor .ProseMirror table { @apply w-full border-collapse mb-4; }
+.tiptap-editor .ProseMirror th { border: 1px solid var(--color-border); background: var(--color-surface-subtle); @apply px-3 py-2 text-left font-semibold; color: var(--color-text-secondary); }
+.tiptap-editor .ProseMirror td { border: 1px solid var(--color-border); @apply px-3 py-2; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror table .selectedCell { background: var(--color-brand-50); }
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--color-text-muted);
+  @apply pointer-events-none float-left h-0;
+  content: attr(data-placeholder);
 }
 
-.markdown-body h1 {
-  @apply text-2xl font-bold mb-4;
-}
-
-.markdown-body p {
-  @apply mb-4;
-}
-
-html[data-theme='dark'] .bg-white {
-  background-color: #111827 !important;
-}
-
-html[data-theme='dark'] .bg-slate-50,
-html[data-theme='dark'] .bg-slate-50\/50,
-html[data-theme='dark'] .bg-slate-100 {
-  background-color: #1f2937 !important;
-}
-
-html[data-theme='dark'] .border-slate-100,
-html[data-theme='dark'] .border-slate-200,
-html[data-theme='dark'] .border-slate-300 {
-  border-color: #334155 !important;
-}
-
-html[data-theme='dark'] .text-slate-900 {
-  color: #e2e8f0 !important;
-}
-
-html[data-theme='dark'] .text-slate-800,
-html[data-theme='dark'] .text-slate-700 {
-  color: #cbd5e1 !important;
-}
-
-html[data-theme='dark'] .text-slate-600,
-html[data-theme='dark'] .text-slate-500,
-html[data-theme='dark'] .text-slate-400 {
-  color: #94a3b8 !important;
-}
-
-.rich-doc-content h1,
-.rich-doc-content h2,
-.rich-doc-content h3,
-.rich-doc-content h4 {
-  @apply text-slate-900 font-bold;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
+/* Markdown body styles */
+.markdown-body { color: var(--color-text-primary); @apply leading-relaxed; }
+.markdown-body h1 { @apply text-2xl font-bold mb-4; }
+.markdown-body p { @apply mb-4; }
+.rich-doc-content h1, .rich-doc-content h2, .rich-doc-content h3, .rich-doc-content h4 {
+  color: var(--color-text-primary); @apply font-bold; margin-top: 1.5em; margin-bottom: 0.5em;
 }
 .rich-doc-content h1 { @apply text-3xl; }
 .rich-doc-content h2 { @apply text-2xl; }
 .rich-doc-content h3 { @apply text-xl; }
-.rich-doc-content p {
-  @apply text-slate-800 leading-relaxed mb-4;
-}
-.rich-doc-content strong {
-  @apply text-slate-900 font-bold;
-}
-.rich-doc-content table {
-  @apply w-full border-collapse mb-4;
-}
-.rich-doc-content th {
-  @apply border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 font-semibold;
-}
-.rich-doc-content td {
-  @apply border border-slate-200 px-3 py-2 text-slate-800;
-}
-.rich-doc-content ul,
-.rich-doc-content ol {
-  @apply text-slate-800 mb-4 pl-6;
-}
-.rich-doc-content li {
-  @apply mb-1;
-}
-
-/* TipTap rich text editor styles */
-.tiptap-editor .ProseMirror {
-  @apply outline-none min-h-[300px] text-slate-800 leading-relaxed;
-}
-.tiptap-editor .ProseMirror p {
-  @apply mb-3;
-}
-.tiptap-editor .ProseMirror h1 {
-  @apply text-2xl font-bold mb-4 text-slate-900;
-}
-.tiptap-editor .ProseMirror h2 {
-  @apply text-xl font-bold mb-3 mt-6 text-slate-900;
-}
-.tiptap-editor .ProseMirror h3 {
-  @apply text-lg font-bold mb-2 mt-4 text-slate-900;
-}
-.tiptap-editor .ProseMirror strong {
-  @apply font-bold text-slate-900;
-}
-.tiptap-editor .ProseMirror ul {
-  @apply list-disc pl-6 mb-3;
-}
-.tiptap-editor .ProseMirror ol {
-  @apply list-decimal pl-6 mb-3;
-}
-.tiptap-editor .ProseMirror li {
-  @apply mb-1;
-}
-.tiptap-editor .ProseMirror table {
-  @apply w-full border-collapse mb-4;
-}
-.tiptap-editor .ProseMirror th {
-  @apply border border-slate-300 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-700;
-}
-.tiptap-editor .ProseMirror td {
-  @apply border border-slate-300 px-3 py-2 text-slate-800;
-}
-.tiptap-editor .ProseMirror table .selectedCell {
-  @apply bg-blue-50;
-}
-.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
-  @apply text-slate-400 pointer-events-none float-left h-0;
-  content: attr(data-placeholder);
-}
+.rich-doc-content p { @apply leading-relaxed mb-4; color: var(--color-text-primary); }
+.rich-doc-content strong { color: var(--color-text-primary); @apply font-bold; }
+.rich-doc-content table { @apply w-full border-collapse mb-4; }
+.rich-doc-content th { border: 1px solid var(--color-border); background: var(--color-surface-subtle); @apply px-3 py-2 text-left font-semibold; color: var(--color-text-secondary); }
+.rich-doc-content td { border: 1px solid var(--color-border); @apply px-3 py-2; color: var(--color-text-primary); }
+.rich-doc-content ul, .rich-doc-content ol { @apply mb-4 pl-6; color: var(--color-text-primary); }
+.rich-doc-content li { @apply mb-1; }
