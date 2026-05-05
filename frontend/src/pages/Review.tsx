@@ -41,6 +41,7 @@ import type {
   ReviewResult,
   UserMember,
 } from '@/src/types';
+import ReviewTemplatePanel from '@/src/components/ReviewTemplatePanel';
 
 export default function Review({
   currentUser,
@@ -309,6 +310,18 @@ export default function Review({
       setIsFinalizing(false);
     }
   }
+  function handleInsertTemplate(content: string) {
+    if (!contract) {
+      return;
+    }
+    if (isEditingContent) {
+      setDraftContent((prev) => prev + '\n\n' + content);
+    } else {
+      setDraftContent(contract.content + '\n\n' + content);
+      setEditKey((prev) => prev + 1);
+      setIsEditingContent(true);
+    }
+  }
   const issues = latestReview?.issues ?? [];
   const pendingIssues = issues.filter((issue) => issue.status === 'pending');
 
@@ -435,6 +448,7 @@ export default function Review({
         </div>
 
         <aside className="w-[420px] bg-white border-l border-slate-200 flex flex-col shrink-0">
+          <ReviewTemplatePanel onInsertContent={handleInsertTemplate} />
           <div className="flex border-b border-slate-100 shrink-0">
             <TabButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} icon={<Zap size={16} />} label="智能扫描" />
             <TabButton
