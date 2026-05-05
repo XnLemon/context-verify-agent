@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from concurrent import futures
 
 import grpc
@@ -11,7 +12,9 @@ from app.schemas.chat import ChatRequest
 from app.schemas.review import ReviewRequest
 from app.services.chat_service import ChatService
 from app.services.review_service import ReviewService
+
 from app.llm.editor import ContractEditor
+from app.multi_agent.protocol import AgentMode, GatewayResponse, PipelineState, PipelineStatus
 
 try:
     from app.agent_rpc import agent_pb2, agent_pb2_grpc
@@ -131,6 +134,121 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=503, error=str(exc))
         except Exception as exc:
             return agent_pb2.JsonResponse(code=500, error=f"unexpected error: {exc}")
+
+    def ReviewMultiAgent(self, request, context):
+        """Multi-agent review with pipeline orchestration."""
+        import json
+        import os
+
+        from app.multi_agent.gateway import GatewayRouter
+        from app.multi_agent.pipeline import PipelineOrchestrator
+        from app.multi_agent.agents import (
+            parser_agent, risk_checker_agent, legal_ref_agent,
+            redrafter_agent, summarizer_agent,
+        )
+        from app.multi_agent.memory import MemoryManager
+        from app.multi_agent.events import EventPublisher
+        from app.multi_agent.config import MultiAgentConfig
+
+        try:
+            config = MultiAgentConfig()
+            gateway = GatewayRouter(config)
+            orchestrator = PipelineOrchestrator(config)
+            memory = MemoryManager(config)
+            publisher = EventPublisher()
+
+            # Register review agents
+            for agent_fn in [parser_agent, risk_checker_agent, legal_ref_agent, redrafter_agent, summarizer_agent]:
+                orchestrator.register_agent(agent_fn.__name__.removesuffix("_agent"), agent_fn)
+
+            # Register routes
+            pipeline_route = [
+                ("parser", "risk_checker"),
+                ("risk_checker", "legal_ref"),
+                ("legal_ref", "redrafter"),
+                ("redrafter", "summarizer"),
+            ]
+            for from_agent, to_agent in pipeline_route:
+                orchestrator.register_route(from_agent, "success", to_agent)
+
+            # Register fallbacks
+            orchestrator.register_fallback("legal_ref", fallback_agent="redrafter")
+            orchestrator.register_fallback("redrafter", fallback_agent="summarizer")
+
+            contract_text = request.contract_text or ""
+            clause_count = len(contract_text) // 100
+
+            mode = gateway._detect_mode(contract_text, clause_count)
+
+            if mode == AgentMode.SINGLE:
+                from app.multi_agent.single import SingleAgentHandler
+                state = PipelineState(
+                    pipeline_id=str(uuid.uuid4()),
+                    contract_id=contract_text[:64] or "unknown",
+                    mode=AgentMode.SINGLE,
+                    team="review",
+                    status=PipelineStatus.PENDING,
+                )
+                single = SingleAgentHandler()
+                state, result = single.run_review(
+                    state,
+                    contract_text=contract_text,
+                    contract_type=request.contract_type,
+                    our_side=request.our_side,
+                )
+                return agent_pb2.JsonResponse(code=200, json=json.dumps(result, ensure_ascii=False))
+
+            # Multi-agent path
+            route_resp = gateway.route(
+                user_message="审查合同",
+                contract_id=contract_text[:64],
+                explicit_mode=mode,
+                contract_clause_count=clause_count,
+            )
+            state = gateway.create_pipeline_state(route_resp, contract_id=contract_text[:64] or "unknown")
+
+            initial_input = {
+                "contract_text": contract_text,
+                "contract_type": request.contract_type or None,
+                "our_side": request.our_side or "甲方",
+            }
+
+            state = orchestrator.run(state, initial_input, on_event=publisher.publish)
+
+            # Save to memory tiers (best-effort)
+            try:
+                memory.save_pipeline_result(state)
+            except Exception:
+                pass
+
+            report = {}
+            if "summarizer" in state.agent_outputs:
+                report = state.agent_outputs["summarizer"].structured_data.get("review_report", {})
+
+            return agent_pb2.JsonResponse(
+                code=200,
+                json=json.dumps({
+                    "pipeline_id": state.pipeline_id,
+                    "mode": state.mode.value,
+                    "status": state.status.value,
+                    "report": report,
+                    "agent_summaries": [
+                        {
+                            "agent_id": aid,
+                            "status": ao.status.value,
+                            "input_summary": ao.input_summary,
+                            "findings_count": len(ao.findings),
+                        }
+                        for aid, ao in state.agent_outputs.items()
+                    ],
+                }, ensure_ascii=False),
+            )
+        except ValueError as exc:
+            return agent_pb2.JsonResponse(code=400, error=str(exc))
+        except RuntimeError as exc:
+            return agent_pb2.JsonResponse(code=503, error=str(exc))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"multi-agent error: {exc}")
 
 
 def serve() -> None:
