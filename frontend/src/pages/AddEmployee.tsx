@@ -38,7 +38,7 @@ export default function AddEmployee() {
       <h2 className="text-xl font-semibold text-slate-900">添加员工</h2>
       <p className="mt-1 text-sm text-slate-500">创建后员工可登录系统，但不具备管理员权限。</p>
 
-      <form onSubmit={handleSubmit} className="mt-6 max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+      <form onSubmit={handleSubmit} className="mt-6 max-w-xl space-y-4 rounded-xl border border-slate-200 bg-surface p-6">
         <div>
           <label className="mb-1 block text-sm text-slate-700">用户名</label>
           <input

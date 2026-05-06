@@ -50,7 +50,7 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
   });
 
   if (!editor) {
-    return <div className="h-64 rounded-lg border border-slate-200 bg-white animate-pulse" />;
+    return <div className="h-64 rounded-lg border border-slate-200 bg-surface animate-pulse" />;
   }
 
   return (
@@ -67,7 +67,7 @@ function Toolbar({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>>
   }
 
   return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-200 bg-white rounded-t-lg flex-wrap shrink-0">
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-200 bg-surface rounded-t-lg flex-wrap shrink-0">
       <ToolbarButton
         icon={<Undo size={16} />}
         onClick={() => editor.chain().focus().undo().run()}

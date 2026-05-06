@@ -16,5 +16,6 @@ public interface AgentGateway {
     Map<String, Object> chat(Map<String, Object> payload);
     Iterator<ChatStreamEvent> chatStream(Map<String, Object> payload);
     String redraft(String contractText, String contractType, String ourSide, List<Map<String, String>> acceptedIssues);
-    Map<String, Object> reviewMultiAgent(String contractText, String contractType, String ourSide);
+
+    Map<String, Object> embedDocument(String text, String docId, String sourceType, String title);
 }

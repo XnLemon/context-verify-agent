@@ -3,158 +3,206 @@
 @theme {
   --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-serif: "Georgia", "Source Han Serif SC", "Noto Serif CJK SC", serif;
+
+  /* Brand */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  /* Surface */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f8fafc;
+  --color-sidebar: #0f172a;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: #2563eb;
+
+  /* Text */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-sidebar: #94a3b8;
+  --color-text-sidebar-active: #ffffff;
+
+  /* Border */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+
+  /* Semantic */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Shadow */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
-  :root {
-    --app-bg: #f8fafc;
-    --app-text: #0f172a;
-    --app-font-scale: 1;
-  }
-
-  html[data-theme='dark'] {
-    --app-bg: #0b1220;
-    --app-text: #e2e8f0;
-  }
-
-  html[data-font-scale='small'] {
-    --app-font-scale: 0.93;
-  }
-
-  html[data-font-scale='medium'] {
-    --app-font-scale: 1;
-  }
-
-  html[data-font-scale='large'] {
-    --app-font-scale: 1.08;
-  }
-
   body {
-    @apply text-slate-900;
     background: var(--app-bg);
     color: var(--app-text);
     font-size: calc(16px * var(--app-font-scale));
   }
 }
 
-.markdown-body {
-  @apply text-slate-800 leading-relaxed;
+/* Base variables (unlayered to override @theme in all browsers including Safari) */
+:root {
+  --app-bg: #f8fafc;
+  --app-text: #0f172a;
+  --app-font-scale: 1;
+
+  /* Redeclare @theme tokens outside @layer for Safari compatibility */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f8fafc;
+  --color-sidebar: #0f172a;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-active: #2563eb;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-sidebar: #94a3b8;
+  --color-text-sidebar-active: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
-.markdown-body h1 {
-  @apply text-2xl font-bold mb-4;
+:root[data-theme='dark'] {
+  --app-bg: #0b1220;
+  --app-text: #e2e8f0;
+  --color-brand-50: #1e3a5f;
+  --color-surface: #0f172a;
+  --color-surface-subtle: #1e293b;
+  --color-sidebar: #020617;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-sidebar: #64748b;
+  --color-text-sidebar-active: #ffffff;
+  --color-border: #334155;
+  --color-border-light: #1e293b;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-info: #60a5fa;
+
+  /* Override built-in Tailwind slate palette for dark mode text legibility.
+     This is the key fix — all page components use text-slate-*/bg-slate-*/border-slate-*
+     classes directly instead of theme-aware tokens, so we override the palette itself. */
+  --color-slate-50: #1a2438;
+  --color-slate-100: #1e293b;
+  --color-slate-200: #334155;
+  --color-slate-300: #475569;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc;
+
+  /* Semantic color overrides for dark mode legibility */
+  --color-red-50: #450a0a;
+  --color-red-100: #7f1d1d;
+  --color-red-200: #991b1b;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-amber-50: #451a03;
+  --color-amber-100: #78350f;
+  --color-amber-200: #92400e;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #fde68a;
+  --color-emerald-50: #022c22;
+  --color-emerald-100: #064e3b;
+  --color-emerald-200: #065f46;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #34d399;
+  --color-emerald-700: #6ee7b7;
+  --color-blue-50: #172554;
+  --color-blue-100: #1e3a5f;
+  --color-blue-200: #1e40af;
+  --color-blue-300: #3b82f6;
+  --color-blue-500: #60a5fa;
+  --color-blue-600: #93c5fd;
+  --color-blue-700: #bfdbfe;
+  --color-indigo-50: #1e1b4b;
+  --color-indigo-400: #818cf8;
+  --color-indigo-600: #a5b4fc;
+  --color-indigo-700: #c7d2fe;
+  --color-violet-50: #2e1065;
+  --color-violet-600: #a78bfa;
 }
 
-.markdown-body p {
-  @apply mb-4;
+/* Font scale */
+:root[data-font-scale='small'] { --app-font-scale: 0.93; }
+:root[data-font-scale='medium'] { --app-font-scale: 1; }
+:root[data-font-scale='large'] { --app-font-scale: 1.08; }
+
+/* Dark mode overrides removed — components reference CSS variables directly */
+
+/* TipTap editor styles */
+.tiptap-editor .ProseMirror {
+  @apply outline-none min-h-[300px] leading-relaxed;
+  color: var(--color-text-primary);
+}
+.tiptap-editor .ProseMirror p { @apply mb-3; }
+.tiptap-editor .ProseMirror h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; margin-top: 1.5rem; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; margin-top: 1rem; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror strong { font-weight: 700; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror ul { @apply list-disc pl-6 mb-3; }
+.tiptap-editor .ProseMirror ol { @apply list-decimal pl-6 mb-3; }
+.tiptap-editor .ProseMirror li { @apply mb-1; }
+.tiptap-editor .ProseMirror table { @apply w-full border-collapse mb-4; }
+.tiptap-editor .ProseMirror th { border: 1px solid var(--color-border); background: var(--color-surface-subtle); @apply px-3 py-2 text-left font-semibold; color: var(--color-text-secondary); }
+.tiptap-editor .ProseMirror td { border: 1px solid var(--color-border); @apply px-3 py-2; color: var(--color-text-primary); }
+.tiptap-editor .ProseMirror table .selectedCell { background: var(--color-brand-50); }
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--color-text-muted);
+  @apply pointer-events-none float-left h-0;
+  content: attr(data-placeholder);
 }
 
-html[data-theme='dark'] .bg-white {
-  background-color: #111827 !important;
-}
-
-html[data-theme='dark'] .bg-slate-50,
-html[data-theme='dark'] .bg-slate-50\/50,
-html[data-theme='dark'] .bg-slate-100 {
-  background-color: #1f2937 !important;
-}
-
-html[data-theme='dark'] .border-slate-100,
-html[data-theme='dark'] .border-slate-200,
-html[data-theme='dark'] .border-slate-300 {
-  border-color: #334155 !important;
-}
-
-html[data-theme='dark'] .text-slate-900 {
-  color: #e2e8f0 !important;
-}
-
-html[data-theme='dark'] .text-slate-800,
-html[data-theme='dark'] .text-slate-700 {
-  color: #cbd5e1 !important;
-}
-
-html[data-theme='dark'] .text-slate-600,
-html[data-theme='dark'] .text-slate-500,
-html[data-theme='dark'] .text-slate-400 {
-  color: #94a3b8 !important;
-}
-
-.rich-doc-content h1,
-.rich-doc-content h2,
-.rich-doc-content h3,
-.rich-doc-content h4 {
-  @apply text-slate-900 font-bold;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
+/* Markdown body styles */
+.markdown-body { color: var(--color-text-primary); @apply leading-relaxed; }
+.markdown-body h1 { @apply text-2xl font-bold mb-4; }
+.markdown-body p { @apply mb-4; }
+.rich-doc-content h1, .rich-doc-content h2, .rich-doc-content h3, .rich-doc-content h4 {
+  color: var(--color-text-primary); @apply font-bold; margin-top: 1.5em; margin-bottom: 0.5em;
 }
 .rich-doc-content h1 { @apply text-3xl; }
 .rich-doc-content h2 { @apply text-2xl; }
 .rich-doc-content h3 { @apply text-xl; }
-.rich-doc-content p {
-  @apply text-slate-800 leading-relaxed mb-4;
-}
-.rich-doc-content strong {
-  @apply text-slate-900 font-bold;
-}
-.rich-doc-content table {
-  @apply w-full border-collapse mb-4;
-}
-.rich-doc-content th {
-  @apply border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-700 font-semibold;
-}
-.rich-doc-content td {
-  @apply border border-slate-200 px-3 py-2 text-slate-800;
-}
-.rich-doc-content ul,
-.rich-doc-content ol {
-  @apply text-slate-800 mb-4 pl-6;
-}
-.rich-doc-content li {
-  @apply mb-1;
-}
-
-/* TipTap rich text editor styles */
-.tiptap-editor .ProseMirror {
-  @apply outline-none min-h-[300px] text-slate-800 leading-relaxed;
-}
-.tiptap-editor .ProseMirror p {
-  @apply mb-3;
-}
-.tiptap-editor .ProseMirror h1 {
-  @apply text-2xl font-bold mb-4 text-slate-900;
-}
-.tiptap-editor .ProseMirror h2 {
-  @apply text-xl font-bold mb-3 mt-6 text-slate-900;
-}
-.tiptap-editor .ProseMirror h3 {
-  @apply text-lg font-bold mb-2 mt-4 text-slate-900;
-}
-.tiptap-editor .ProseMirror strong {
-  @apply font-bold text-slate-900;
-}
-.tiptap-editor .ProseMirror ul {
-  @apply list-disc pl-6 mb-3;
-}
-.tiptap-editor .ProseMirror ol {
-  @apply list-decimal pl-6 mb-3;
-}
-.tiptap-editor .ProseMirror li {
-  @apply mb-1;
-}
-.tiptap-editor .ProseMirror table {
-  @apply w-full border-collapse mb-4;
-}
-.tiptap-editor .ProseMirror th {
-  @apply border border-slate-300 bg-slate-50 px-3 py-2 text-left font-semibold text-slate-700;
-}
-.tiptap-editor .ProseMirror td {
-  @apply border border-slate-300 px-3 py-2 text-slate-800;
-}
-.tiptap-editor .ProseMirror table .selectedCell {
-  @apply bg-blue-50;
-}
-.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
-  @apply text-slate-400 pointer-events-none float-left h-0;
-  content: attr(data-placeholder);
-}
+.rich-doc-content p { @apply leading-relaxed mb-4; color: var(--color-text-primary); }
+.rich-doc-content strong { color: var(--color-text-primary); @apply font-bold; }
+.rich-doc-content table { @apply w-full border-collapse mb-4; }
+.rich-doc-content th { border: 1px solid var(--color-border); background: var(--color-surface-subtle); @apply px-3 py-2 text-left font-semibold; color: var(--color-text-secondary); }
+.rich-doc-content td { border: 1px solid var(--color-border); @apply px-3 py-2; color: var(--color-text-primary); }
+.rich-doc-content ul, .rich-doc-content ol { @apply mb-4 pl-6; color: var(--color-text-primary); }
+.rich-doc-content li { @apply mb-1; }

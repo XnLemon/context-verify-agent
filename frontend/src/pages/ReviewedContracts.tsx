@@ -77,7 +77,7 @@ export default function ReviewedContracts({
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between text-sm">
           <p className="text-slate-600">
             共 <span className="font-semibold text-slate-900">{contracts.length}</span> 份已审核合同
@@ -92,15 +92,15 @@ export default function ReviewedContracts({
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">合同名称</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">类型</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">状态</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">提交人</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">更新时间</th>
+              <tr className="bg-surface-subtle">
+                <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">合同名称</th>
+                <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">类型</th>
+                <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">状态</th>
+                <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">提交人</th>
+                <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">更新时间</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border-light">
               {loading ? (
                 <LoadingRow />
               ) : pageItems.length === 0 ? (
@@ -129,21 +129,21 @@ export default function ReviewedContracts({
           </table>
         )}
 
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-end gap-2">
+        <div className="px-6 py-4 border-t border-border bg-surface-subtle flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             disabled={page <= 1}
-            className="h-8 w-8 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+            className="h-8 w-8 rounded-md border border-slate-200 bg-surface text-text-muted hover:bg-surface-subtle disabled:opacity-40"
           >
             <ChevronLeft size={16} className="mx-auto" />
           </button>
-          <span className="px-2 text-sm text-slate-500">{page}</span>
+          <span className="px-2 text-sm text-text-muted">{page}</span>
           <button
             type="button"
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={page >= totalPages}
-            className="h-8 w-8 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+            className="h-8 w-8 rounded-md border border-slate-200 bg-surface text-text-muted hover:bg-surface-subtle disabled:opacity-40"
           >
             <ChevronRight size={16} className="mx-auto" />
           </button>
