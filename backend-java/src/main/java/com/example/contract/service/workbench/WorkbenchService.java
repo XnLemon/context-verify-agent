@@ -120,6 +120,26 @@ public class WorkbenchService {
         return DTOConverter.toContract(contract);
     }
 
+    public PipelineStatusResponse scanContractMulti(String contractId, String contractType, String ourSide, Member currentMember) {
+        Map<String, Object> contract = requireContract(contractId, currentMember);
+        Map<String, Object> result = agentGateway.reviewMultiAgent(
+                (String) contract.get("content"),
+                contractType != null ? contractType : (String) contract.get("type"),
+                ourSide
+        );
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> summaries = (List<Map<String, Object>>) result.getOrDefault("agentSummaries", List.of());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> report = (Map<String, Object>) result.getOrDefault("report", Map.of());
+        return new PipelineStatusResponse(
+                (String) result.get("pipeline_id"),
+                (String) result.get("mode"),
+                (String) result.get("status"),
+                report,
+                summaries
+        );
+    }
+
     public ScanResponse scanContract(String contractId, String contractType, String ourSide, Member currentMember) {
         Map<String, Object> contract = requireContract(contractId, currentMember);
         Map<String, Object> review = agentGateway.reviewText((String) contract.get("content"), contractType != null ? contractType : (String) contract.get("type"), ourSide);

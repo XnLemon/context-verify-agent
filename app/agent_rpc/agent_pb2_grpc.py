@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from app.agent_rpc import agent_pb2 as agent__pb2
+import agent_pb2 as agent__pb2
 
 GRPC_GENERATED_VERSION = '1.66.2'
 GRPC_VERSION = grpc.__version__
@@ -64,6 +64,11 @@ class AgentRpcServiceStub(object):
                 request_serializer=agent__pb2.RedraftRequest.SerializeToString,
                 response_deserializer=agent__pb2.JsonResponse.FromString,
                 _registered_method=True)
+        self.ReviewMultiAgent = channel.unary_unary(
+                '/contract.agent.v1.AgentRpcService/ReviewMultiAgent',
+                request_serializer=agent__pb2.ReviewRequest.SerializeToString,
+                response_deserializer=agent__pb2.JsonResponse.FromString,
+                _registered_method=True)
 
 
 class AgentRpcServiceServicer(object):
@@ -105,6 +110,12 @@ class AgentRpcServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ReviewMultiAgent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AgentRpcServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -136,6 +147,11 @@ def add_AgentRpcServiceServicer_to_server(servicer, server):
             'Redraft': grpc.unary_unary_rpc_method_handler(
                     servicer.Redraft,
                     request_deserializer=agent__pb2.RedraftRequest.FromString,
+                    response_serializer=agent__pb2.JsonResponse.SerializeToString,
+            ),
+            'ReviewMultiAgent': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReviewMultiAgent,
+                    request_deserializer=agent__pb2.ReviewRequest.FromString,
                     response_serializer=agent__pb2.JsonResponse.SerializeToString,
             ),
     }
@@ -300,6 +316,33 @@ class AgentRpcService(object):
             target,
             '/contract.agent.v1.AgentRpcService/Redraft',
             agent__pb2.RedraftRequest.SerializeToString,
+            agent__pb2.JsonResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReviewMultiAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/contract.agent.v1.AgentRpcService/ReviewMultiAgent',
+            agent__pb2.ReviewRequest.SerializeToString,
             agent__pb2.JsonResponse.FromString,
             options,
             channel_credentials,

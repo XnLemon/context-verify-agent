@@ -77,6 +77,24 @@ public class CustomStubAgentGateway implements AgentGateway {
         return contractText + "\n\n[custom adapter stub redraft]";
     }
 
+    @Override
+    public Map<String, Object> reviewMultiAgent(String contractText, String contractType, String ourSide) {
+        Map<String, Object> stub = reviewLike(contractText, contractType);
+        return Map.of(
+                "pipeline_id", "stub-pipeline",
+                "mode", "multi_auto",
+                "status", "completed",
+                "report", stub.get("report"),
+                "agent_summaries", List.of(
+                        Map.of("agent_id", "parser", "status", "completed", "findings_count", 0),
+                        Map.of("agent_id", "risk_checker", "status", "completed", "findings_count", 1),
+                        Map.of("agent_id", "legal_ref", "status", "completed", "findings_count", 0),
+                        Map.of("agent_id", "redrafter", "status", "skipped", "findings_count", 0),
+                        Map.of("agent_id", "summarizer", "status", "completed", "findings_count", 0)
+                )
+        );
+    }
+
     private Map<String, Object> reviewLike(String text, String contractType) {
         if (text == null || text.isBlank()) {
             throw new ApiException(400, "合同正文不能为空");

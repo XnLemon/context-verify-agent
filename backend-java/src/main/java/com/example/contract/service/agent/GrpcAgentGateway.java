@@ -104,6 +104,13 @@ public class GrpcAgentGateway implements AgentGateway {
         return revised == null ? contractText : revised.toString();
     }
 
+    @Override
+    public Map<String, Object> reviewMultiAgent(String contractText, String contractType, String ourSide) {
+        ReviewRequest req = ReviewRequest.newBuilder().setContractText(contractText)
+                .setContractType(nullToEmpty(contractType)).setOurSide(nullToEmpty(ourSide)).build();
+        return parseJson(call(() -> withTimeout().reviewMultiAgent(req)));
+    }
+
     @PreDestroy
     public void shutdown() {
         channel.shutdown();
