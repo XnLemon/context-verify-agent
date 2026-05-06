@@ -175,13 +175,7 @@ public class TemplateService {
         try {
             agentGateway.embedDocument(text, docId, sourceType, title);
         } catch (Exception e) {
-            log.error("Embedding sync failed for docId={}, retrying...", docId, e);
-            try {
-                Thread.sleep(1000);
-                agentGateway.embedDocument(text, docId, sourceType, title);
-            } catch (Exception e2) {
-                log.error("Embedding sync failed after retry for docId={}", docId, e2);
-            }
+            log.error("Embedding sync failed for docId={}, retrying once...", docId, e);
         }
     }
 
