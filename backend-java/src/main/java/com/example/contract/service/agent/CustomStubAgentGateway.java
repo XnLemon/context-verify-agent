@@ -78,6 +78,18 @@ public class CustomStubAgentGateway implements AgentGateway {
     }
 
     @Override
+    public Map<String, Object> reviewMultiAgent(String contractText, String contractType, String ourSide) {
+        Map<String, Object> stub = reviewLike(contractText, contractType);
+        return Map.of(
+                "pipeline_id", "stub-pipeline",
+                "mode", "multi_auto",
+                "status", "completed",
+                "report", stub.get("report"),
+                "agent_summaries", List.of()
+        );
+    }
+
+    @Override
     public Map<String, Object> embedDocument(String text, String docId, String sourceType, String title) {
         return Map.of("status", "ok", "doc_id", docId);
     }
