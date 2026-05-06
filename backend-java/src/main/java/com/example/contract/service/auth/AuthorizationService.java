@@ -26,7 +26,7 @@ public class AuthorizationService {
 
     public Member requireEmployeeOperator(String authorization) {
         Member member = requireLoggedIn(authorization);
-        if (!"employee".equals(member.role()) || "legal".equals(member.memberType())) {
+        if (!"employee".equals(member.role())) {
             throw new ApiException(403, "仅员工可上传或修改合同");
         }
         return member;
@@ -34,17 +34,9 @@ public class AuthorizationService {
 
     public Member requireFinalApprover(String authorization) {
         Member member = requireLoggedIn(authorization);
-        if ("admin".equals(member.role()) || "legal".equals(member.memberType())) {
+        if ("admin".equals(member.role()) || "legal".equals(member.memberType()) || "business".equals(member.memberType())) {
             return member;
         }
         throw new ApiException(403, "仅经理/审核可执行最终审批");
-    }
-
-    public Member requireTemplateEditor(String authorization) {
-        Member member = requireLoggedIn(authorization);
-        if (!"admin".equals(member.role()) && !"legal".equals(member.memberType())) {
-            throw new ApiException(403, "仅管理员和法务可管理模板");
-        }
-        return member;
     }
 }
