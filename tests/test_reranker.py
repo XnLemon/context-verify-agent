@@ -79,7 +79,7 @@ class RerankerTests(unittest.TestCase):
             settings.retrieval_enable_hybrid = old_enable_hybrid
             settings.retrieval_dense_pool_k = old_dense_pool_k
 
-        self.assertEqual([item.page_content for item in out], docs[:2])
+        self.assertEqual(out, docs[:2])
         self.assertEqual(reranker.calls, 0)
         self.assertEqual(retriever.last_rerank_meta.get("reason"), "short_circuit_dense_bm25_top1_agree")
 

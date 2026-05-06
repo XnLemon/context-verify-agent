@@ -176,7 +176,7 @@ export default function Dashboard({
             <span>新建校审任务</span>
           </motion.button>
         ) : (
-          <div className="text-xs text-slate-500 rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <div className="text-xs text-slate-500 rounded-xl border border-slate-200 bg-surface px-3 py-2">
             当前账号仅可进行最终审批
           </div>
         )}
@@ -213,7 +213,7 @@ export default function Dashboard({
         />
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-surface rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-lg font-bold">近期合同任务</h2>
           <div className="flex items-center gap-3">
@@ -234,13 +234,13 @@ export default function Dashboard({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">合同名称</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">类型</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">状态</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">提交人</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">更新时间</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">操作</th>
+                <tr className="bg-surface-subtle">
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">合同名称</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">类型</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">状态</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">提交人</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider">更新时间</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider text-right">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -296,15 +296,15 @@ export default function Dashboard({
           </div>
         )}
 
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-          <p className="text-sm text-slate-500">当前显示 {contracts.length} 份合同</p>
-          <div className="text-xs text-slate-400">点击任意合同进入校审工作台</div>
+        <div className="p-4 bg-surface-subtle border-t border-border flex items-center justify-between">
+          <p className="text-sm text-text-muted">当前显示 {contracts.length} 份合同</p>
+          <div className="text-xs text-text-muted">点击任意合同进入校审工作台</div>
         </div>
       </div>
 
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-[1px] flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+          <div className="w-full max-w-lg bg-surface rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">上传合同</h3>
               <button
@@ -412,7 +412,7 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-surface p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className={cn('p-2.5 rounded-xl', toneClassNames[tone])}>{icon}</div>
       </div>

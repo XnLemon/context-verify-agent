@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import uuid
 from concurrent import futures
 
@@ -27,6 +28,7 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
         self.review_service = ReviewService()
         self.chat_service = ChatService()
         self.contract_editor: ContractEditor | None = None
+        self._embed_lock = threading.Lock()
 
     def Health(self, request, context):
         health = self.review_service.health()
@@ -35,7 +37,7 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             llm_configured=health.llm_configured,
             knowledge_base_ready=health.knowledge_base_ready,
             version="agent-python-1.0",
-            capabilities=["health", "parse", "review", "chat", "redraft"],
+            capabilities=["health", "parse", "review", "chat", "redraft", "embed"],
         )
 
     def ParseFile(self, request, context):
@@ -138,7 +140,6 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
     def ReviewMultiAgent(self, request, context):
         """Multi-agent review with pipeline orchestration."""
         import json
-        import os
 
         from app.multi_agent.gateway import GatewayRouter
         from app.multi_agent.pipeline import PipelineOrchestrator
@@ -249,6 +250,39 @@ class AgentRpcServicer(agent_pb2_grpc.AgentRpcServiceServicer):
             return agent_pb2.JsonResponse(code=503, error=str(exc))
         except Exception as exc:
             return agent_pb2.JsonResponse(code=500, error=f"multi-agent error: {exc}")
+
+    def EmbedDocument(self, request, context):
+        try:
+            from app.rag.knowledge_chunk_repository import KnowledgeChunkRepository
+            from app.schemas.knowledge import KnowledgeChunk
+            from app.rag.knowledge_documents import build_knowledge_documents
+            from app.rag.vector_store import load_vector_store, save_vector_store, build_vector_store
+            from app.core.config import settings
+
+            chunk = KnowledgeChunk(
+                chunk_id=request.doc_id,
+                doc_name=request.title or "template",
+                doc_type="template",
+                title=request.title or "template",
+                text=request.text,
+                source_path=f"template/{request.source_type}",
+            )
+            repo = KnowledgeChunkRepository()
+            repo.upsert_chunks([chunk], version="template")
+
+            documents = build_knowledge_documents([chunk])
+
+            with self._embed_lock:
+                try:
+                    vector_store = load_vector_store(settings.knowledge_vector_store_dir)
+                    vector_store.add_documents(documents)
+                except Exception:
+                    vector_store = build_vector_store(documents)
+                save_vector_store(vector_store, settings.knowledge_vector_store_dir)
+
+            return agent_pb2.JsonResponse(code=200, json=json.dumps({"status": "ok", "doc_id": request.doc_id}))
+        except Exception as exc:
+            return agent_pb2.JsonResponse(code=500, error=f"embed failed: {exc}")
 
 
 def serve() -> None:

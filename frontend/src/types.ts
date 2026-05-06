@@ -175,5 +175,44 @@ export interface AvatarUploadResponse {
   member: UserMember;
 }
 
+export interface TemplateTag {
+  id: number;
+  name: string;
+  color: string;
+}
 
+export interface TemplateRequest {
+  name: string;
+  description?: string;
+  content: string;
+  tags: number[];
+}
 
+export interface TemplateResponse {
+  id: string;
+  name: string;
+  description?: string;
+  content: string;
+  tags: TemplateTag[];
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClauseRequest {
+  title: string;
+  content: string;
+  tags: number[];
+}
+
+export interface ClauseResponse {
+  id: string;
+  title: string;
+  content: string;
+  tags: TemplateTag[];
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}

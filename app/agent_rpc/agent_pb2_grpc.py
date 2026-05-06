@@ -5,7 +5,7 @@ import warnings
 
 import agent_pb2 as agent__pb2
 
-GRPC_GENERATED_VERSION = '1.66.2'
+GRPC_GENERATED_VERSION = '1.80.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in agent_pb2_grpc.py depends on'
+        + ' but the generated code in agent_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -64,9 +64,9 @@ class AgentRpcServiceStub(object):
                 request_serializer=agent__pb2.RedraftRequest.SerializeToString,
                 response_deserializer=agent__pb2.JsonResponse.FromString,
                 _registered_method=True)
-        self.ReviewMultiAgent = channel.unary_unary(
-                '/contract.agent.v1.AgentRpcService/ReviewMultiAgent',
-                request_serializer=agent__pb2.ReviewRequest.SerializeToString,
+        self.EmbedDocument = channel.unary_unary(
+                '/contract.agent.v1.AgentRpcService/EmbedDocument',
+                request_serializer=agent__pb2.EmbedDocumentRequest.SerializeToString,
                 response_deserializer=agent__pb2.JsonResponse.FromString,
                 _registered_method=True)
 
@@ -110,7 +110,7 @@ class AgentRpcServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ReviewMultiAgent(self, request, context):
+    def EmbedDocument(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -149,9 +149,9 @@ def add_AgentRpcServiceServicer_to_server(servicer, server):
                     request_deserializer=agent__pb2.RedraftRequest.FromString,
                     response_serializer=agent__pb2.JsonResponse.SerializeToString,
             ),
-            'ReviewMultiAgent': grpc.unary_unary_rpc_method_handler(
-                    servicer.ReviewMultiAgent,
-                    request_deserializer=agent__pb2.ReviewRequest.FromString,
+            'EmbedDocument': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmbedDocument,
+                    request_deserializer=agent__pb2.EmbedDocumentRequest.FromString,
                     response_serializer=agent__pb2.JsonResponse.SerializeToString,
             ),
     }
@@ -328,7 +328,7 @@ class AgentRpcService(object):
             _registered_method=True)
 
     @staticmethod
-    def ReviewMultiAgent(request,
+    def EmbedDocument(request,
             target,
             options=(),
             channel_credentials=None,
@@ -341,8 +341,8 @@ class AgentRpcService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/contract.agent.v1.AgentRpcService/ReviewMultiAgent',
-            agent__pb2.ReviewRequest.SerializeToString,
+            '/contract.agent.v1.AgentRpcService/EmbedDocument',
+            agent__pb2.EmbedDocumentRequest.SerializeToString,
             agent__pb2.JsonResponse.FromString,
             options,
             channel_credentials,

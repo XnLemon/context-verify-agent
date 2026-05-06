@@ -105,10 +105,14 @@ public class GrpcAgentGateway implements AgentGateway {
     }
 
     @Override
-    public Map<String, Object> reviewMultiAgent(String contractText, String contractType, String ourSide) {
-        ReviewRequest req = ReviewRequest.newBuilder().setContractText(contractText)
-                .setContractType(nullToEmpty(contractType)).setOurSide(nullToEmpty(ourSide)).build();
-        return parseJson(call(() -> withTimeout().reviewMultiAgent(req)));
+    public Map<String, Object> embedDocument(String text, String docId, String sourceType, String title) {
+        EmbedDocumentRequest req = EmbedDocumentRequest.newBuilder()
+                .setText(text)
+                .setDocId(docId)
+                .setSourceType(sourceType)
+                .setTitle(title)
+                .build();
+        return parseJson(call(() -> withTimeout().embedDocument(req)));
     }
 
     @PreDestroy
