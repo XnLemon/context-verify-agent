@@ -44,23 +44,23 @@ public class TemplateRepository {
     }
 
     public Optional<CompanyTemplate> getById(String id) {
-        List<CompanyTemplate> rows = jdbc.query("select * from company_templates where id=? and is_deleted=false",
+        List<CompanyTemplate> rows = jdbc.query("select * from company_templates where id=cast(? as uuid) and is_deleted=false",
                 this::toTemplate, id);
         return rows.stream().findFirst();
     }
 
     public void insert(CompanyTemplate t) {
-        jdbc.update("insert into company_templates(id,name,description,content,tags,created_by,updated_by,created_at,updated_at) values (?,?,?,?,cast(? as jsonb),?,?,now(),now())",
+        jdbc.update("insert into company_templates(id,name,description,content,tags,created_by,updated_by,created_at,updated_at) values (cast(? as uuid),?,?,?,cast(? as jsonb),?,?,now(),now())",
                 t.id(), t.name(), t.description(), t.content(), toJsonArray(t.tags()), t.createdBy(), t.updatedBy());
     }
 
     public void update(CompanyTemplate t) {
-        jdbc.update("update company_templates set name=?,description=?,content=?,tags=cast(? as jsonb),updated_by=?,updated_at=now() where id=?",
+        jdbc.update("update company_templates set name=?,description=?,content=?,tags=cast(? as jsonb),updated_by=?,updated_at=now() where id=cast(? as uuid)",
                 t.name(), t.description(), t.content(), toJsonArray(t.tags()), t.updatedBy(), t.id());
     }
 
     public void softDelete(String id) {
-        jdbc.update("update company_templates set is_deleted=true,updated_at=now() where id=?", id);
+        jdbc.update("update company_templates set is_deleted=true,updated_at=now() where id=cast(? as uuid)", id);
     }
 
     private CompanyTemplate toTemplate(ResultSet rs, int i) throws SQLException {

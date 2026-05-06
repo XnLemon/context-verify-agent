@@ -26,19 +26,19 @@ public class TemplateController {
     }
 
     @PostMapping("/api/tags")
-    public TagResponse createTag(@RequestHeader("authorization") String auth, @Valid @RequestBody TagRequest req) {
+    public TagResponse createTag(@RequestHeader(value = "authorization", required = false) String auth, @Valid @RequestBody TagRequest req) {
         authorizationService.requireTemplateEditor(auth);
         return templateService.createTag(req);
     }
 
     @PutMapping("/api/tags/{id}")
-    public TagResponse updateTag(@RequestHeader("authorization") String auth, @PathVariable int id, @Valid @RequestBody TagRequest req) {
+    public TagResponse updateTag(@RequestHeader(value = "authorization", required = false) String auth, @PathVariable int id, @Valid @RequestBody TagRequest req) {
         authorizationService.requireTemplateEditor(auth);
         return templateService.updateTag(id, req);
     }
 
     @DeleteMapping("/api/tags/{id}")
-    public void deleteTag(@RequestHeader("authorization") String auth, @PathVariable int id) {
+    public void deleteTag(@RequestHeader(value = "authorization", required = false) String auth, @PathVariable int id) {
         authorizationService.requireTemplateEditor(auth);
         templateService.deleteTag(id);
     }
@@ -59,20 +59,20 @@ public class TemplateController {
     }
 
     @PostMapping("/api/templates")
-    public TemplateResponse createTemplate(@RequestHeader("authorization") String auth, @Valid @RequestBody TemplateRequest req) {
+    public TemplateResponse createTemplate(@RequestHeader(value = "authorization", required = false) String auth, @Valid @RequestBody TemplateRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.createTemplate(req, member.id());
     }
 
     @PutMapping("/api/templates/{id}")
-    public TemplateResponse updateTemplate(@RequestHeader("authorization") String auth,
+    public TemplateResponse updateTemplate(@RequestHeader(value = "authorization", required = false) String auth,
                                            @PathVariable String id, @Valid @RequestBody TemplateRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.updateTemplate(id, req, member.id());
     }
 
     @DeleteMapping("/api/templates/{id}")
-    public void deleteTemplate(@RequestHeader("authorization") String auth, @PathVariable String id) {
+    public void deleteTemplate(@RequestHeader(value = "authorization", required = false) String auth, @PathVariable String id) {
         Member member = authorizationService.requireTemplateEditor(auth);
         templateService.deleteTemplate(id);
     }
@@ -93,20 +93,20 @@ public class TemplateController {
     }
 
     @PostMapping("/api/clauses")
-    public ClauseResponse createClause(@RequestHeader("authorization") String auth, @Valid @RequestBody ClauseRequest req) {
+    public ClauseResponse createClause(@RequestHeader(value = "authorization", required = false) String auth, @Valid @RequestBody ClauseRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.createClause(req, member.id());
     }
 
     @PutMapping("/api/clauses/{id}")
-    public ClauseResponse updateClause(@RequestHeader("authorization") String auth,
+    public ClauseResponse updateClause(@RequestHeader(value = "authorization", required = false) String auth,
                                        @PathVariable String id, @Valid @RequestBody ClauseRequest req) {
         Member member = authorizationService.requireTemplateEditor(auth);
         return templateService.updateClause(id, req, member.id());
     }
 
     @DeleteMapping("/api/clauses/{id}")
-    public void deleteClause(@RequestHeader("authorization") String auth, @PathVariable String id) {
+    public void deleteClause(@RequestHeader(value = "authorization", required = false) String auth, @PathVariable String id) {
         Member member = authorizationService.requireTemplateEditor(auth);
         templateService.deleteClause(id);
     }

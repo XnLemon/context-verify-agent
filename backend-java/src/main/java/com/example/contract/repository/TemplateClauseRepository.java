@@ -42,23 +42,23 @@ public class TemplateClauseRepository {
     }
 
     public Optional<TemplateClause> getById(String id) {
-        List<TemplateClause> rows = jdbc.query("select * from template_clauses where id=? and is_deleted=false",
+        List<TemplateClause> rows = jdbc.query("select * from template_clauses where id=cast(? as uuid) and is_deleted=false",
                 this::toClause, id);
         return rows.stream().findFirst();
     }
 
     public void insert(TemplateClause c) {
-        jdbc.update("insert into template_clauses(id,title,content,tags,created_by,updated_by,created_at,updated_at) values (?,?,?,cast(? as jsonb),?,?,now(),now())",
+        jdbc.update("insert into template_clauses(id,title,content,tags,created_by,updated_by,created_at,updated_at) values (cast(? as uuid),?,?,cast(? as jsonb),?,?,now(),now())",
                 c.id(), c.title(), c.content(), toJsonArray(c.tags()), c.createdBy(), c.updatedBy());
     }
 
     public void update(TemplateClause c) {
-        jdbc.update("update template_clauses set title=?,content=?,tags=cast(? as jsonb),updated_by=?,updated_at=now() where id=?",
+        jdbc.update("update template_clauses set title=?,content=?,tags=cast(? as jsonb),updated_by=?,updated_at=now() where id=cast(? as uuid)",
                 c.title(), c.content(), toJsonArray(c.tags()), c.updatedBy(), c.id());
     }
 
     public void softDelete(String id) {
-        jdbc.update("update template_clauses set is_deleted=true,updated_at=now() where id=?", id);
+        jdbc.update("update template_clauses set is_deleted=true,updated_at=now() where id=cast(? as uuid)", id);
     }
 
     private TemplateClause toClause(ResultSet rs, int i) throws SQLException {

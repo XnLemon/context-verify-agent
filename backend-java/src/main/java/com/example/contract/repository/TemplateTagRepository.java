@@ -1,6 +1,8 @@
 package com.example.contract.repository;
 
+import com.example.contract.exception.ApiException;
 import com.example.contract.model.TemplateTag;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -22,7 +24,11 @@ public class TemplateTagRepository {
     }
 
     public int insert(String name, String color) {
-        return jdbc.queryForObject("insert into template_tags(name,color) values (?,?) returning id", Integer.class, name, color);
+        try {
+            return jdbc.queryForObject("insert into template_tags(name,color) values (?,?) returning id", Integer.class, name, color);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(409, "标签名已存在");
+        }
     }
 
     public void update(int id, String name, String color) {

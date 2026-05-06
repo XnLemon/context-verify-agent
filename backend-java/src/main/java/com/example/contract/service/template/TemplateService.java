@@ -65,6 +65,7 @@ public class TemplateService {
     }
 
     public TemplateResponse getTemplate(String id) {
+        validateUuid(id);
         CompanyTemplate t = templateRepo.getById(id)
                 .orElseThrow(() -> new ApiException(404, "模板不存在"));
         return toTemplateResponse(t, loadTagMap());
@@ -87,6 +88,7 @@ public class TemplateService {
 
     @Transactional
     public TemplateResponse updateTemplate(String id, TemplateRequest req, int memberId) {
+        validateUuid(id);
         CompanyTemplate existing = templateRepo.getById(id)
                 .orElseThrow(() -> new ApiException(404, "模板不存在"));
         CompanyTemplate updated = new CompanyTemplate(id, req.name(), req.description(), req.content(), req.tags(),
@@ -103,6 +105,7 @@ public class TemplateService {
 
     @Transactional
     public void deleteTemplate(String id) {
+        validateUuid(id);
         templateRepo.softDelete(id);
     }
 
@@ -116,6 +119,7 @@ public class TemplateService {
     }
 
     public ClauseResponse getClause(String id) {
+        validateUuid(id);
         TemplateClause c = clauseRepo.getById(id)
                 .orElseThrow(() -> new ApiException(404, "条款不存在"));
         return toClauseResponse(c, loadTagMap());
@@ -138,6 +142,7 @@ public class TemplateService {
 
     @Transactional
     public ClauseResponse updateClause(String id, ClauseRequest req, int memberId) {
+        validateUuid(id);
         TemplateClause existing = clauseRepo.getById(id)
                 .orElseThrow(() -> new ApiException(404, "条款不存在"));
         TemplateClause updated = new TemplateClause(id, req.title(), req.content(), req.tags(),
@@ -154,7 +159,16 @@ public class TemplateService {
 
     @Transactional
     public void deleteClause(String id) {
+        validateUuid(id);
         clauseRepo.softDelete(id);
+    }
+
+    private static void validateUuid(String id) {
+        try {
+            UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(404, "资源不存在");
+        }
     }
 
     private void syncEmbedding(String text, String docId, String sourceType, String title) {
